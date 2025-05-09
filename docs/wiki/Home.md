@@ -1,22 +1,13 @@
-# Minecraft Command Generator Wiki
+# Minecraft Command Generator
 
-Welcome to the Minecraft Command Generator wiki! This tool helps you create and validate Minecraft commands with a user-friendly interface.
+Welcome to the Minecraft Command Generator! This tool helps you create and validate Minecraft commands with a user-friendly interface.
 
-## Quick Links
+## Quick Start
 
-### User Guides
-- [[Getting Started]]
-- [[Basic Usage]]
-- [[Command Types]]
-- [[Item Search Guide]]
-- [[Troubleshooting]]
-
-### Technical Documentation
-- [[Command System Overview]]
-- [[UI Components]]
-- [[Item Search System]]
-- [[Command Generation]]
-- [[Development Guide]]
+1. [[Getting Started|Installation and basic setup]]
+2. [[Basic Usage|Creating your first command]]
+3. [[Item Search Guide|Finding and using items]]
+4. [[Command Types|Available commands]]
 
 ## Features
 
@@ -38,14 +29,30 @@ Welcome to the Minecraft Command Generator wiki! This tool helps you create and 
 - Clear feedback
 - Error prevention
 
-## Getting Help
+## Documentation
 
-- Check the [[Troubleshooting]] guide for common issues
-- Visit our [GitHub Issues](https://github.com/ShockerAttack01/MinecraftCommandGenerator/issues) page
+### User Guides
+- [[Getting Started]] - Installation and setup
+- [[Basic Usage]] - Creating commands
+- [[Item Search Guide]] - Finding items
+- [[Command Types]] - Available commands
+- [[Troubleshooting]] - Common issues
+
+### Technical Documentation
+- [[Command System Overview]] - System architecture
+- [[UI Components]] - Interface details
+- [[Item Search System]] - Search functionality
+- [[Command Generation]] - Command creation
+- [[Development Guide]] - Contributing
+
+## Support
+
+### Getting Help
+- Check the [[Troubleshooting]] guide
+- Visit our [GitHub Issues](https://github.com/ShockerAttack01/MinecraftCommandGenerator/issues)
 - Join our [Discord Community](https://discord.gg/your-invite-link)
 
-## Contributing
-
+### Contributing
 We welcome contributions! Please see our [[Contributing Guidelines]] for more information.
 
 ## License
@@ -53,6 +60,7 @@ We welcome contributions! Please see our [[Contributing Guidelines]] for more in
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/ShockerAttack01/MinecraftCommandGenerator/blob/main/LICENSE) file for details.
 
 ## Latest Updates
-- Added automatic wiki updates via GitHub Actions
+- Added automatic wiki updates
 - Improved documentation structure
-- Enhanced search functionality 
+- Enhanced search functionality
+- Added technical documentation 
