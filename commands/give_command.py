@@ -41,6 +41,7 @@ class GiveCommand(BaseCommand):
             all_formatted_items (List[str]): List of all available items in display format.
         """
         # Process all items and categories
+        self.version_var = None
         self.item_categories = ITEM_CATEGORIES
         category_items = set(item for items in self.item_categories.values() for item in items)
         
@@ -86,11 +87,9 @@ class GiveCommand(BaseCommand):
         player_frame = ctk.CTkFrame(self.param_frame)
         player_frame.pack(fill="x", padx=5, pady=2)
         self.create_player_input(player_frame)
-        
-        # Create version selector
-        version_frame = ctk.CTkFrame(self.param_frame)
-        version_frame.pack(fill="x", padx=5, pady=2)
-        self.create_version_selector(version_frame)
+
+        # Use the existing version selector from the main application
+        self.version_var = self.master.master.version_var
         
         # Create item parameter with search box and category selector
         item_frame = ctk.CTkFrame(self.param_frame)

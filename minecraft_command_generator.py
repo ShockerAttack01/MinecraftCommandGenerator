@@ -6,40 +6,49 @@ from commands import GiveCommand, EffectCommand, GamemodeCommand, TeleportComman
 class SearchBox(ctk.CTkFrame):
     """
     A custom search box widget with suggestions.
+    This widget allows users to type in a search field and see a list of suggestions
+    based on their input. It supports filtering and selecting items from the list.
     """
     def __init__(self, master: ctk.CTkFrame, items: List[str], command: Optional[callable] = None):
         """
         Initialize the search box.
-        
+
         Args:
-            master (CTkFrame): The parent frame.
+            master (CTkFrame): The parent frame where the search box will be placed.
             items (List[str]): List of items to display as suggestions.
-            command (callable, optional): Callback function when an item is selected.
+            command (callable, optional): Callback function triggered when an item is selected.
         """
         super().__init__(master)
         self.items = items
         self.command = command
         
-        # Create entry field
+        # Create entry field for user input
         self.entry = ctk.CTkEntry(self)
         self.entry.pack(side="left", fill="x", expand=True)
-        self.entry.bind("<KeyRelease>", self.on_key_release)
-        self.entry.bind("<FocusIn>", self.on_focus_in)
-        self.entry.bind("<FocusOut>", self.on_focus_out)
+        self.entry.bind("<KeyRelease>", self.on_key_release)  # Update suggestions on key release
+        self.entry.bind("<FocusIn>", self.on_focus_in)        # Show suggestions on focus
+        self.entry.bind("<FocusOut>", self.on_focus_out)      # Hide suggestions on focus out
         
-        # Create suggestions frame
+        # Create a frame to hold suggestions
         self.suggestions_frame = ctk.CTkFrame(self)
         self.suggestions_frame.pack(side="left", fill="x", expand=True)
         
-        # Create scrollable frame for suggestions
+        # Create a scrollable frame for suggestions
         self.scrollable_frame = ctk.CTkScrollableFrame(self.suggestions_frame)
         self.scrollable_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Create suggestion buttons
+        # Initialize suggestion buttons
         self.suggestion_buttons = []
         self.update_suggestions(self.items)
         
     def on_key_release(self, event):
+        """
+        Handle key release events in the entry field.
+        Filters the suggestions based on the current input.
+
+        Args:
+            event: The key release event.
+        """
         text = self.entry.get().lower()
         if not text:
             self.update_suggestions(self.items)
@@ -51,15 +60,29 @@ class SearchBox(ctk.CTkFrame):
             self.command(self.entry.get())
             
     def on_focus_in(self, event):
+        """
+        Handle focus-in events for the entry field.
+        Displays the full list of suggestions.
+
+        Args:
+            event: The focus-in event.
+        """
         self.update_suggestions(self.items)
         
     def on_focus_out(self, event):
+        """
+        Handle focus-out events for the entry field.
+        Hides the suggestions frame.
+
+        Args:
+            event: The focus-out event.
+        """
         self.suggestions_frame.pack_forget()
         
     def update_suggestions(self, items: List[str]) -> None:
         """
-        Update the suggestion list.
-        
+        Update the list of suggestions displayed in the suggestions frame.
+
         Args:
             items (List[str]): List of items to display as suggestions.
         """
@@ -68,7 +91,7 @@ class SearchBox(ctk.CTkFrame):
             button.destroy()
         self.suggestion_buttons.clear()
         
-        # Create new buttons
+        # Create new buttons for each suggestion
         for item in items:
             button = ctk.CTkButton(
                 self.scrollable_frame,
@@ -79,13 +102,19 @@ class SearchBox(ctk.CTkFrame):
             button.pack(fill="x", pady=2)
             self.suggestion_buttons.append(button)
             
-        # Show/hide suggestions frame
+        # Show or hide the suggestions frame based on the number of items
         if items:
             self.suggestions_frame.pack(side="left", fill="x", expand=True)
         else:
             self.suggestions_frame.pack_forget()
             
     def select_item(self, item: str):
+        """
+        Handle the selection of a suggestion.
+
+        Args:
+            item (str): The selected item.
+        """
         self.entry.delete(0, "end")
         self.entry.insert(0, item)
         self.update_suggestions(self.items)
@@ -93,15 +122,29 @@ class SearchBox(ctk.CTkFrame):
             self.command(item)
             
     def get(self) -> str:
+        """
+        Get the current value of the entry field.
+
+        Returns:
+            str: The current value of the entry field.
+        """
         return self.entry.get()
         
     def set_items(self, items: List[str]):
+        """
+        Update the list of items used for suggestions.
+
+        Args:
+            items (List[str]): The new list of items.
+        """
         self.items = items
         self.update_suggestions(items)
 
 class MinecraftCommandGenerator(ctk.CTk):
     """
     Main application class for the Minecraft Command Generator.
+    This class creates the GUI for generating Minecraft commands and provides
+    functionality for selecting command types, versions, and parameters.
     """
     def __init__(self):
         """
@@ -110,13 +153,13 @@ class MinecraftCommandGenerator(ctk.CTk):
         super().__init__()
         
         self.title("Minecraft Command Generator")
-        self.geometry("1200x800")  # Increased window size
+        self.geometry("1200x800")  # Set the window size
         
-        # Create main frame
+        # Create the main frame to hold all widgets
         self.main_frame = ctk.CTkFrame(self)
         self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Create command type selector
+        # Create the command type selector
         self.command_type_frame = ctk.CTkFrame(self.main_frame)
         self.command_type_frame.pack(fill="x", padx=5, pady=5)
         
@@ -132,7 +175,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         )
         self.command_type_dropdown.pack(side="left", padx=5)
         
-        # Create version selector
+        # Create the version selector
         self.version_frame = ctk.CTkFrame(self.main_frame)
         self.version_frame.pack(fill="x", padx=5, pady=5)
         
@@ -148,11 +191,11 @@ class MinecraftCommandGenerator(ctk.CTk):
         )
         self.version_dropdown.pack(side="left", padx=5)
         
-        # Create parameters frame
+        # Create the parameters frame for command-specific inputs
         self.parameters_frame = ctk.CTkFrame(self.main_frame)
         self.parameters_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Create command output frame
+        # Create the command output frame
         self.command_frame = ctk.CTkFrame(self.main_frame)
         self.command_frame.pack(fill="x", padx=5, pady=5)
         
@@ -162,7 +205,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.command_text = ctk.CTkTextbox(self.command_frame, height=50)
         self.command_text.pack(side="left", fill="x", expand=True, padx=5)
         
-        # Create feedback frame
+        # Create the feedback frame for additional information
         self.feedback_frame = ctk.CTkFrame(self.main_frame)
         self.feedback_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
@@ -172,10 +215,10 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.feedback_text = ctk.CTkTextbox(self.feedback_frame, height=200)  # Increased height
         self.feedback_text.pack(side="left", fill="both", expand=True, padx=5)
         
-        # Initialize command instance
+        # Initialize the current command instance
         self.current_command = None
         
-        # Preload all items and effects
+        # Preload all items and effects for suggestions
         self.all_items = []
         for category_items in ITEM_CATEGORIES.values():
             self.all_items.extend(category_items)
@@ -190,8 +233,8 @@ class MinecraftCommandGenerator(ctk.CTk):
         
     def on_command_change(self, command_type: str) -> None:
         """
-        Handle command type change.
-        
+        Handle changes to the selected command type.
+
         Args:
             command_type (str): The selected command type.
         """
@@ -199,7 +242,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         for widget in self.parameters_frame.winfo_children():
             widget.destroy()
         
-        # Create new command UI
+        # Create new command UI based on the selected type
         if command_type:
             command_data = COMMAND_TYPES[command_type]
             if command_type == "give":
@@ -217,39 +260,39 @@ class MinecraftCommandGenerator(ctk.CTk):
         else:
             self.current_command = None
         
-        # Update command output
+        # Update the command output
         self.update_command()
         
     def on_version_change(self, version: str):
         """
-        Handle version change.
-        
+        Handle changes to the selected Minecraft version.
+
         Args:
             version (str): The selected Minecraft version.
         """
-        # Update command if needed
+        # Update the command if needed
         if self.current_command:
             self.update_command()
             
     def update_command(self, event=None) -> None:
         """
-        Update the command output and feedback.
+        Update the command output and feedback based on the current parameters.
         """
         if not self.current_command:
             self.command_text.delete("1.0", "end")
             self.feedback_text.delete("1.0", "end")
             return
             
-        # Update command text
+        # Update the command text
         command = self.current_command.update_command()
         self.command_text.delete("1.0", "end")
         self.command_text.insert("1.0", command)
         
-        # Update feedback
+        # Update the feedback text
         feedback = self.current_command.get_feedback()
         self.feedback_text.delete("1.0", "end")
         self.feedback_text.insert("1.0", "\n".join(feedback))
 
 if __name__ == "__main__":
     app = MinecraftCommandGenerator()
-    app.mainloop() 
+    app.mainloop()
