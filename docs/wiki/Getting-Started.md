@@ -6,7 +6,7 @@ Welcome to the Minecraft Command Generator! This guide will help you get started
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/minecraft-command-generator.git
+   git clone https://github.com/ShockerAttack01/MinecraftCommandGenerator.git
    ```
 
 2. Install dependencies:
@@ -54,6 +54,21 @@ Welcome to the Minecraft Command Generator! This guide will help you get started
   - Parameter status
   - Error messages
   - Item information
+
+## Documentation
+
+### Wiki Updates
+The project's documentation is automatically updated through GitHub Actions:
+- Documentation is stored in the `docs/wiki` directory
+- Changes are automatically validated and formatted
+- Updates are pushed to the GitHub wiki
+- Broken links and formatting issues are caught early
+
+### Contributing to Documentation
+1. Make changes to files in `docs/wiki`
+2. Commit and push your changes
+3. The wiki will be automatically updated
+4. Check the Actions tab for validation results
 
 ## Next Steps
 
