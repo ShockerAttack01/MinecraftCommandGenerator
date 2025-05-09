@@ -16,17 +16,62 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout wiki
-        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          repository: ShockerAttack01/MinecraftCommandGenerator.wiki
-          path: wiki
+          python-version: '3.10'
 
-      - name: Update wiki files
+      - name: Install dependencies
         run: |
-          cp -r docs/wiki/*.md wiki/
+          python -m pip install --upgrade pip
+          pip install markdown-link-checker
+          pip install mdformat
+          pip install markdown-toc
+
+      - name: Validate documentation
+        run: |
+          # Check for broken links
+          find docs/wiki -name "*.md" -exec markdown-link-check {} \;
+          
+          # Format markdown files
+          mdformat docs/wiki/*.md
+          
+          # Generate table of contents
+          for file in docs/wiki/*.md; do
+            if [ "$(basename "$file")" != "Home.md" ]; then
+              markdown-toc -i "$file"
+            fi
+          done
+
+      - name: Initialize wiki repository
+        run: |
+          mkdir wiki
           cd wiki
+          git init
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
+          cp -r ../docs/wiki/*.md .
           git add .
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update wiki from docs" && git push) 
+          git commit -m "Initial wiki commit"
+          git branch -M main
+
+      - name: Push to wiki
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          directory: wiki
+          repository: ShockerAttack01/MinecraftCommandGenerator.wiki
+          branch: main
+          force: true
+
+      - name: Create wiki issue on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Wiki Update Failed',
+              body: 'The automatic wiki update failed. Please check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.'
+            }) 
