@@ -30,21 +30,22 @@ class GiveCommand(BaseCommand):
     This class extends BaseCommand to provide a specialized interface for the /give command,
     including item search, category filtering, and parameter validation.
     """
-    
-    def __init__(self, master: ctk.CTkFrame, command_data: Dict[str, Any], all_formatted_items: List[str]):
+
+    def __init__(self, master: ctk.CTkFrame, command_data: Dict[str, Any], all_formatted_items: List[str], version_var: ctk.StringVar):
         """
         Initialize the give command interface.
-        
+
         Args:
             master (CTkFrame): The parent frame for the command UI.
             command_data (Dict[str, Any]): Command configuration data.
             all_formatted_items (List[str]): List of all available items in display format.
+            version_var (StringVar): The version variable from the parent frame.
         """
         # Process all items and categories
-        self.version_var = None
+        self.version_var = version_var
         self.item_categories = ITEM_CATEGORIES
         category_items = set(item for items in self.item_categories.values() for item in items)
-        
+
         # Add additional items from all_formatted_items
         self.all_items = list(category_items)
         self.all_formatted_items = [item.replace("_", " ").title() for item in self.all_items]
@@ -53,7 +54,7 @@ class GiveCommand(BaseCommand):
             if raw_item not in category_items:
                 self.all_items.append(raw_item)
                 self.all_formatted_items.append(item)
-        
+
         # Create item data structure with tags and versions
         self.item_data = [
             {
@@ -65,47 +66,43 @@ class GiveCommand(BaseCommand):
             for formatted_item, raw_item in zip(self.all_formatted_items, self.all_items)
         ]
         self.item_data.sort(key=lambda x: x['formatted'])
-        
+
         # Initialize loading state
         self.is_loading = False
         self.loading_thread = None
-        
+
         super().__init__(master, "give", command_data)
-    
+
     def setup_ui(self) -> None:
         """
         Set up the UI elements for the give command.
-        
+
         Creates and arranges the following components:
         1. Player input with target selector
-        2. Version selector
-        3. Item search with category selector
-        4. Amount input
-        5. NBT input
+        2. Item search with category selector
+        3. Amount input
+        4. NBT input
         """
         # Create player parameter with target selector
         player_frame = ctk.CTkFrame(self.param_frame)
         player_frame.pack(fill="x", padx=5, pady=2)
         self.create_player_input(player_frame)
 
-        # Use the existing version selector from the main application
-        self.version_var = self.master.master.version_var
-        
         # Create item parameter with search box and category selector
         item_frame = ctk.CTkFrame(self.param_frame)
         item_frame.pack(fill="x", padx=5, pady=2)
         self.create_item_search(item_frame)
-        
+
         # Create amount parameter
         amount_frame = ctk.CTkFrame(self.param_frame)
         amount_frame.pack(fill="x", padx=5, pady=2)
         self.create_amount_input(amount_frame)
-        
+
         # Create NBT parameter
         nbt_frame = ctk.CTkFrame(self.param_frame)
         nbt_frame.pack(fill="x", padx=5, pady=2)
         self.create_nbt_input(nbt_frame)
-        
+
         # Show initial suggestions
         self.update_suggestions()
     
@@ -175,7 +172,8 @@ class GiveCommand(BaseCommand):
         Args:
             version (str): The newly selected version.
         """
-        self.update_suggestions()
+        self.version_var.set(version)
+        self.update_suggestions()  # Reload suggestions based on the new version
         self.on_parameter_change()
     
     def create_item_search(self, frame: ctk.CTkFrame) -> None:

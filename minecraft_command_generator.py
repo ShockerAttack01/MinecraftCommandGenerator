@@ -159,6 +159,30 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.main_frame = ctk.CTkFrame(self)
         self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
+        # Create the top bar for home and settings buttons
+        self.top_bar = ctk.CTkFrame(self.main_frame, height=40)
+        self.top_bar.pack(fill="x", padx=5, pady=5)
+
+        # Create the home button in the top-left corner
+        self.home_button = ctk.CTkButton(
+            self.top_bar,
+            text="Home",
+            width=80,
+            height=30,
+            command=self.show_home_page
+        )
+        self.home_button.pack(side="left", padx=5)
+
+        # Create the settings button in the top-right corner
+        self.settings_button = ctk.CTkButton(
+            self.top_bar,
+            text="⚙️ Settings",
+            width=80,
+            height=30,
+            command=self.open_settings
+        )
+        self.settings_button.pack(side="right", padx=5)
+
         # Create the command type selector
         self.command_type_frame = ctk.CTkFrame(self.main_frame)
         self.command_type_frame.pack(fill="x", padx=5, pady=5)
@@ -174,7 +198,16 @@ class MinecraftCommandGenerator(ctk.CTk):
             command=self.on_command_change
         )
         self.command_type_dropdown.pack(side="left", padx=5)
+
+        # Add buttons for all command types below the version selector
+        self.command_buttons_frame = ctk.CTkFrame(self.main_frame)
+        self.command_buttons_frame.pack(fill="x", padx=5, pady=5)
+
+        self.add_command_buttons()
         
+        # Bind the command type variable to actively update the UI
+        self.command_type_var.trace_add("write", self.on_command_type_change)
+
         # Create the version selector
         self.version_frame = ctk.CTkFrame(self.main_frame)
         self.version_frame.pack(fill="x", padx=5, pady=5)
@@ -183,6 +216,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.version_label.pack(side="left", padx=5)
         
         self.version_var = ctk.StringVar(value=VERSIONS[0])
+        self.version_var.trace_add("write", self.on_version_change)
         self.version_dropdown = ctk.CTkOptionMenu(
             self.version_frame,
             values=VERSIONS,
@@ -212,8 +246,11 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.feedback_label = ctk.CTkLabel(self.feedback_frame, text="Feedback:")
         self.feedback_label.pack(side="left", padx=5)
         
-        self.feedback_text = ctk.CTkTextbox(self.feedback_frame, height=200)  # Increased height
+        self.feedback_text = ctk.CTkTextbox(self.feedback_frame, height=50)  # Increased height
         self.feedback_text.pack(side="left", fill="both", expand=True, padx=5)
+        
+        # Show the home page initially
+        self.show_home_page()
         
         # Initialize the current command instance
         self.current_command = None
@@ -231,6 +268,64 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.all_effects.sort()
         self.all_formatted_effects = [effect.replace("_", " ").title() for effect in self.all_effects]
         
+    def add_command_buttons(self):
+        """
+        Add smaller buttons for all command types below the version selector.
+        """
+        for widget in self.command_buttons_frame.winfo_children():
+            widget.destroy()
+
+        for command_type in COMMAND_TYPES.keys():
+            button = ctk.CTkButton(
+                self.command_buttons_frame,
+                text=command_type.capitalize(),
+                width=100,
+                height=30,
+                command=lambda c=command_type: self.on_command_change(c)
+            )
+            button.pack(side="left", padx=5, pady=5)
+
+    def open_settings(self):
+        """
+        Open the settings page (placeholder for now).
+        """
+        print("Settings button clicked!")
+
+    def show_home_page(self):
+        """
+        Display the home page with all command options as buttons.
+        """
+        # Clear previous UI
+        for widget in self.parameters_frame.winfo_children():
+            widget.destroy()
+        for widget in self.command_buttons_frame.winfo_children():
+            widget.destroy()
+
+        # Add buttons for each command
+        for command_type in COMMAND_TYPES.keys():
+            button = ctk.CTkButton(
+                self.command_buttons_frame,
+                text=command_type.capitalize(),
+                width=100,
+                height=30,
+                command=lambda c=command_type: self.on_command_change(c)
+            )
+            button.pack(side="left", padx=5, pady=5)
+
+        # Clear the command output and feedback
+        self.command_text.delete("1.0", "end")
+        self.feedback_text.delete("1.0", "end")
+
+    def on_command_type_change(self, *args):
+        """
+        Handle changes to the command type input box and update the UI.
+        """
+        selected_command = self.command_type_var.get()
+        if selected_command:
+            self.on_command_change(selected_command)
+        else:
+            self.show_home_page()
+
     def on_command_change(self, command_type: str) -> None:
         """
         Handle changes to the selected command type.
@@ -238,6 +333,12 @@ class MinecraftCommandGenerator(ctk.CTk):
         Args:
             command_type (str): The selected command type.
         """
+        self.command_type_var.set(command_type)  # Update the dropdown value
+
+        # Clear the command buttons frame
+        for widget in self.command_buttons_frame.winfo_children():
+            widget.destroy()
+
         # Clear previous command UI
         for widget in self.parameters_frame.winfo_children():
             widget.destroy()
@@ -246,7 +347,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         if command_type:
             command_data = COMMAND_TYPES[command_type]
             if command_type == "give":
-                self.current_command = GiveCommand(self.parameters_frame, command_data, self.all_formatted_items)
+                self.current_command = GiveCommand(self.parameters_frame, command_data, self.all_formatted_items, self.version_var)
             elif command_type == "effect":
                 self.current_command = EffectCommand(self.parameters_frame, command_data)
             elif command_type == "gamemode":
@@ -263,13 +364,16 @@ class MinecraftCommandGenerator(ctk.CTk):
         # Update the command output
         self.update_command()
         
-    def on_version_change(self, version: str):
+    def on_version_change(self, *args):
         """
         Handle changes to the selected Minecraft version.
 
         Args:
             version (str): The selected Minecraft version.
         """
+
+        if hasattr(self, "current_command") and isinstance(self.current_command, GiveCommand):
+            self.current_command.on_version_change(self.version_var.get())
         # Update the command if needed
         if self.current_command:
             self.update_command()
@@ -296,3 +400,4 @@ class MinecraftCommandGenerator(ctk.CTk):
 if __name__ == "__main__":
     app = MinecraftCommandGenerator()
     app.mainloop()
+
