@@ -388,37 +388,31 @@ ITEM_TAGS = {
 
 # Item version information
 ITEM_VERSIONS = {
-    # Beta 1.9 Prerelease items
-    "blaze_rod": "Beta 1.9 Prerelease",
-    "ghast_tear": "Beta 1.9 Prerelease",
-    "gold_nugget": "Beta 1.9 Prerelease",
-    "nether_wart": "Beta 1.9 Prerelease",
-    
-    # Beta 1.9 Prerelease 2 items
-    "blaze_powder": "Beta 1.9 Prerelease 2",
-    "fermented_spider_eye": "Beta 1.9 Prerelease 2",
-    "glass_bottle": "Beta 1.9 Prerelease 2",
-    "magma_cream": "Beta 1.9 Prerelease 2",
-    "spider_eye": "Beta 1.9 Prerelease 2",
-    "music_disc_13": "Beta 1.9 Prerelease 2",
-    "music_disc_cat": "Beta 1.9 Prerelease 2",
-    "music_disc_blocks": "Beta 1.9 Prerelease 2",
-    "music_disc_chirp": "Beta 1.9 Prerelease 2",
-    "music_disc_far": "Beta 1.9 Prerelease 2",
-    "music_disc_mall": "Beta 1.9 Prerelease 2",
-    "music_disc_mellohi": "Beta 1.9 Prerelease 2",
-    "music_disc_stal": "Beta 1.9 Prerelease 2",
-    "music_disc_strad": "Beta 1.9 Prerelease 2",
-    "music_disc_ward": "Beta 1.9 Prerelease 2",
-    "music_disc_11": "Beta 1.9 Prerelease 2",
-    
-    # Beta 1.9 Prerelease 3 items
-    "ender_eye": "Beta 1.9 Prerelease 3",
-    
-    # Beta 1.9 Prerelease 4 items
-    "glistering_melon_slice": "Beta 1.9 Prerelease 4",
-    "potion": "Beta 1.9 Prerelease 4",
-    "splash_potion": "Beta 1.9 Prerelease 4",
+    # 1.0.0 items
+    "blaze_rod": "1.0.0",
+    "ghast_tear": "1.0.0",
+    "gold_nugget": "1.0.0",
+    "nether_wart": "1.0.0",
+    "blaze_powder": "1.0.0",
+    "fermented_spider_eye": "1.0.0",
+    "glass_bottle": "1.0.0",
+    "magma_cream": "1.0.0",
+    "spider_eye": "1.0.0",
+    "music_disc_13": "1.0.0",
+    "music_disc_cat": "1.0.0",
+    "music_disc_blocks": "1.0.0",
+    "music_disc_chirp": "1.0.0",
+    "music_disc_far": "1.0.0",
+    "music_disc_mall": "1.0.0",
+    "music_disc_mellohi": "1.0.0",
+    "music_disc_stal": "1.0.0",
+    "music_disc_strad": "1.0.0",
+    "music_disc_ward": "1.0.0",
+    "music_disc_11": "1.0.0",
+    "ender_eye": "1.0.0",
+    "glistering_melon_slice": "1.0.0",
+    "potion": "1.0.0",
+    "splash_potion": "1.0.0",
     
     # 1.1 items
     "spawn_egg": "1.1",

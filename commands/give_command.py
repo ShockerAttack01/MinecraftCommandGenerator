@@ -549,3 +549,4 @@ class GiveCommand(BaseCommand):
         self.update_command()
         if hasattr(self.master, "master") and hasattr(self.master.master, "update_command"):
             self.master.master.update_command() 
+

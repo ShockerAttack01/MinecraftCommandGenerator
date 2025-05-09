@@ -188,3 +188,4 @@ class BaseCommand:
     def update_command(self) -> None:
         """Update the command output based on current parameter values."""
         pass  # To be implemented by subclasses
+

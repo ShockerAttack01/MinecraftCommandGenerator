@@ -1,5 +1,7 @@
 import customtkinter as ctk
 from typing import Dict, List, Any
+
+from command_summarizer import CommandSummarizer
 from .base_command import BaseCommand
 from minecraft_data import TARGET_SELECTORS
 import re
@@ -139,8 +141,14 @@ class TeleportCommand(BaseCommand):
             feedback.append("⚠️ Command is incomplete. Please specify a target.")
             return feedback
             
-        # Add command description
-        feedback.append(f"📝 {self.command_data['description']}")
+        # Add command summary using CommandSummarizer
+        params = {
+            "player": self.get_parameter_value("target"),
+            "x": self.get_parameter_value("coordinates")[0],
+            "y": self.get_parameter_value("coordinates")[1],
+            "z": self.get_parameter_value("coordinates")[2]
+        }
+        feedback.append(CommandSummarizer.summarize("tp", params))
         feedback.append("")
         
         # Target validation
@@ -184,3 +192,4 @@ class TeleportCommand(BaseCommand):
                     feedback.append(f"• {param}: {self.command_data['feedback'][param]}")
                     
         return feedback
+
