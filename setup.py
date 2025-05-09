@@ -4,6 +4,10 @@ import sys
 def install_requirements():
     """
     Installs the dependencies listed in requirements.txt.
+    This script:
+    - Upgrades pip, setuptools, and wheel.
+    - Installs all dependencies from requirements.txt.
+    - Exits with an error message if any step fails.
     """
     try:
         # Upgrade pip, setuptools, and wheel
