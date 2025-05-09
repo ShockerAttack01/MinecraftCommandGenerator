@@ -81,7 +81,7 @@ class GiveCommand(BaseCommand):
         1. Player input with target selector
         2. Item search with category selector
         3. Amount input
-        4. NBT input
+        4. NBT input with structured interface
         """
         # Create player parameter with target selector
         player_frame = ctk.CTkFrame(self.param_frame)
@@ -98,7 +98,7 @@ class GiveCommand(BaseCommand):
         amount_frame.pack(fill="x", padx=5, pady=2)
         self.create_amount_input(amount_frame)
 
-        # Create NBT parameter
+        # Create NBT parameter with structured input
         nbt_frame = ctk.CTkFrame(self.param_frame)
         nbt_frame.pack(fill="x", padx=5, pady=2)
         self.create_nbt_input(nbt_frame)
@@ -242,29 +242,77 @@ class GiveCommand(BaseCommand):
     
     def create_nbt_input(self, frame: ctk.CTkFrame) -> None:
         """
-        Create the NBT input field.
-        
+        Create the NBT input field with multiple buttons for predefined NBT data options.
+
         Args:
             frame (CTkFrame): The parent frame for the NBT input.
         """
         # Add label
-        label = ctk.CTkLabel(frame, text="NBT:")
-        label.pack(side="left", padx=5)
-        
-        # Create entry field
+        label = ctk.CTkLabel(frame, text="NBT Data:")
+        label.pack(side="top", anchor="w", padx=5)
+
+        # Create entry field for raw NBT input
         entry = ctk.CTkEntry(frame)
-        entry.pack(side="left", fill="x", expand=True, padx=5)
-        
+        entry.pack(fill="x", padx=5, pady=2)
+        entry.bind("<KeyRelease>", self.on_nbt_change)
+
         # Store the entry widget
         self.parameter_vars["nbt"] = entry
-        
-        # Bind events to update feedback
-        entry.bind("<KeyRelease>", lambda e: self.on_parameter_change(e))
-        entry.bind("<FocusOut>", lambda e: self.on_parameter_change(e))
-        
-        # Initialize feedback
-        self.on_parameter_change(None)
-    
+
+        # Create a frame for NBT option buttons
+        nbt_buttons_frame = ctk.CTkFrame(frame)
+        nbt_buttons_frame.pack(fill="x", padx=5, pady=5)
+
+        # Define predefined NBT options
+        nbt_options = {
+            "Unbreakable": '{"Unbreakable":1b}',
+            "Custom Name": '{"display":{"Name":"{\\"text\\":\\"Custom Item\\"}"}}',
+            "Enchantments": '{"Enchantments":[{"id":"minecraft:sharpness","lvl":5s}]}',
+            "Lore": '{"display":{"Lore":["{\\"text\\":\\"Special Lore\\"}"]}}',
+            "Attributes": '{"AttributeModifiers":[{"AttributeName":"generic.attack_damage","Name":"generic.attack_damage","Amount":10,"Operation":0,"UUID":[I;1,2,3,4]}]}'
+        }
+
+        # Create buttons for each NBT option
+        for label, nbt_data in nbt_options.items():
+            button = ctk.CTkButton(
+                nbt_buttons_frame,
+                text=label,
+                command=lambda data=nbt_data: self.append_nbt_data(data),
+                height=30
+            )
+            button.pack(side="left", padx=5, pady=2)
+
+    def append_nbt_data(self, nbt_data: str) -> None:
+        """
+        Append the selected NBT data to the existing NBT input field.
+
+        Args:
+            nbt_data (str): The NBT data to append.
+        """
+        current_nbt = self.parameter_vars["nbt"].get().strip()
+        if current_nbt:
+            # Merge the new NBT data with the existing data
+            if current_nbt.endswith("}") and nbt_data.startswith("{"):
+                combined_nbt = f"{current_nbt[:-1]},{nbt_data[1:]}"
+            else:
+                combined_nbt = f"{current_nbt},{nbt_data}"
+        else:
+            combined_nbt = nbt_data
+
+        # Update the NBT input field
+        self.parameter_vars["nbt"].delete(0, "end")
+        self.parameter_vars["nbt"].insert(0, combined_nbt)
+        self.on_parameter_change()
+
+    def on_nbt_change(self, event) -> None:
+        """
+        Handle changes to the NBT input field.
+
+        Args:
+            event: The key release event.
+        """
+        self.on_parameter_change(event)
+
     def update_suggestions(self, search_text: str = "") -> None:
         """
         Update the item suggestions based on search text, selected category, and version.
@@ -546,4 +594,7 @@ class GiveCommand(BaseCommand):
         self.update_command()
         if hasattr(self.master, "master") and hasattr(self.master.master, "update_command"):
             self.master.master.update_command() 
+
+
+
 
