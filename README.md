@@ -4,7 +4,7 @@ A user-friendly GUI application for generating Minecraft commands with version-s
 
 ## Features
 
-- Support for multiple Minecraft versions (1.16 - 1.20.4)
+- Support for multiple Minecraft versions (1.16 - 1.20.4) All massively WIP
 - Real-time command preview
 - Command validation and feedback
 - Command history tracking
