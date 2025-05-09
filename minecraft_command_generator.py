@@ -167,6 +167,12 @@ class MinecraftCommandGenerator(ctk.CTk):
         # Create a dictionary to store favorite commands
         self.favorite_commands = set()
 
+        # Ensure the directory for the favorites file exists
+        os.makedirs(os.path.dirname(self.FAVORITES_FILE), exist_ok=True)
+
+        # Load favorites from file
+        self.favorite_commands = self.load_favorites()
+
         # Update the top bar layout
         self.top_bar = ctk.CTkFrame(self.main_frame, height=40)
         self.top_bar.pack(fill="x", padx=5, pady=5)
@@ -232,50 +238,50 @@ class MinecraftCommandGenerator(ctk.CTk):
             command=self.on_version_change
         )
         self.version_dropdown.pack(side="left", padx=5)
-        
+
         # Create the parameters frame for command-specific inputs
         self.parameters_frame = ctk.CTkFrame(self.main_frame)
         self.parameters_frame.pack(fill="both", expand=True, padx=5, pady=5)
-        
+
         # Create the command output frame
         self.command_frame = ctk.CTkFrame(self.main_frame)
         self.command_frame.pack(fill="x", padx=5, pady=5)
-        
+
         self.command_label = ctk.CTkLabel(self.command_frame, text="Command:")
         self.command_label.pack(side="left", padx=5)
-        
+
         self.command_text = ctk.CTkTextbox(self.command_frame, height=50)
         self.command_text.pack(side="left", fill="x", expand=True, padx=5)
-        
+
         # Create the feedback frame for additional information
         self.feedback_frame = ctk.CTkFrame(self.main_frame)
         self.feedback_frame.pack(fill="both", expand=True, padx=5, pady=5)
-        
+
         self.feedback_label = ctk.CTkLabel(self.feedback_frame, text="Feedback:")
         self.feedback_label.pack(side="left", padx=5)
-        
+
         self.feedback_text = ctk.CTkTextbox(self.feedback_frame, height=50)  # Increased height
         self.feedback_text.pack(side="left", fill="both", expand=True, padx=5)
-        
+
         # Show the home page initially
         self.show_home_page()
-        
+
         # Initialize the current command instance
         self.current_command = None
-        
+
         # Preload all items and effects for suggestions
         self.all_items = []
         for category_items in ITEM_CATEGORIES.values():
             self.all_items.extend(category_items)
         self.all_items.sort()
         self.all_formatted_items = [item.replace("_", " ").title() for item in self.all_items]
-        
+
         self.all_effects = []
         for category_effects in EFFECT_CATEGORIES.values():
             self.all_effects.extend(category_effects)
         self.all_effects.sort()
         self.all_formatted_effects = [effect.replace("_", " ").title() for effect in self.all_effects]
-        
+
         # Ensure the directory for the favorites file exists
         os.makedirs(os.path.dirname(self.FAVORITES_FILE), exist_ok=True)
 
@@ -305,16 +311,18 @@ class MinecraftCommandGenerator(ctk.CTk):
         """
         Add command buttons to the slider, sorted alphabetically, with favorite functionality.
         """
+        # Clear existing buttons
         for widget in self.command_slider_frame.winfo_children():
             widget.destroy()
 
         # Sort commands alphabetically, with favorites first
-        sorted_commands = sorted(COMMAND_TYPES.keys(), key=lambda c: (c not in self.favorite_commands, c))
+        sorted_commands = sorted(COMMAND_TYPES.keys(), key=lambda c: (c not in self.favorite_commands, c.lower()))
 
         for command_type in sorted_commands:
             frame = ctk.CTkFrame(self.command_slider_frame, height=30, width=130)
             frame.pack(side="left", padx=5, pady=5)
 
+            # Create the main command button
             button = ctk.CTkButton(
                 frame,
                 text=command_type.capitalize(),
@@ -324,6 +332,7 @@ class MinecraftCommandGenerator(ctk.CTk):
             )
             button.pack(side="left")
 
+            # Create the favorite button with the correct star icon
             favorite_button = ctk.CTkButton(
                 frame,
                 text="⭐" if command_type in self.favorite_commands else "☆",
@@ -332,10 +341,6 @@ class MinecraftCommandGenerator(ctk.CTk):
                 command=partial(self.toggle_favorite, command_type),
             )
             favorite_button.pack(side="left")
-
-        # Ensure buttons do not interfere with scrolling
-        for widget in self.command_slider_frame.winfo_children():
-            widget.bind("<MouseWheel>", lambda e: self.scroll_horizontally(e))
 
     def toggle_favorite(self, command_type: str):
         """
@@ -349,7 +354,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         # Save favorites to file
         self.save_favorites()
 
-        # Refresh the command buttons
+        # Refresh the command buttons to reflect the updated favorites
         self.add_command_buttons()
 
     def open_settings(self):
@@ -393,7 +398,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         # Clear previous command UI
         for widget in self.parameters_frame.winfo_children():
             widget.destroy()
-        
+
         # Create new command UI based on the selected type
         if command_type:
             command_data = COMMAND_TYPES[command_type]
@@ -405,16 +410,16 @@ class MinecraftCommandGenerator(ctk.CTk):
                 self.current_command = GamemodeCommand(self.parameters_frame, command_data)
             elif command_type == "tp":
                 self.current_command = TeleportCommand(self.parameters_frame, command_data)
-            
+
             # Set up command update callback
             if self.current_command:
                 self.current_command.on_parameter_change = self.update_command
         else:
             self.current_command = None
-        
+
         # Update the command output
         self.update_command()
-        
+
     def on_version_change(self, *args):
         """
         Handle changes to the selected Minecraft version.
@@ -428,7 +433,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         # Update the command if needed
         if self.current_command:
             self.update_command()
-            
+
     def update_command(self, event=None) -> None:
         """
         Update the command output and feedback based on the current parameters.
@@ -437,12 +442,12 @@ class MinecraftCommandGenerator(ctk.CTk):
             self.command_text.delete("1.0", "end")
             self.feedback_text.delete("1.0", "end")
             return
-            
+
         # Update the command text
         command = self.current_command.update_command()
         self.command_text.delete("1.0", "end")
         self.command_text.insert("1.0", command)
-        
+
         # Update the feedback text
         feedback = self.current_command.get_feedback()
         self.feedback_text.delete("1.0", "end")
