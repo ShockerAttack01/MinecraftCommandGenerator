@@ -41,7 +41,7 @@ Welcome to the Minecraft Command Generator wiki! This tool helps you create and 
 ## Getting Help
 
 - Check the [[Troubleshooting]] guide for common issues
-- Visit our [GitHub Issues](https://github.com/yourusername/minecraft-command-generator/issues) page
+- Visit our [GitHub Issues](https://github.com/ShockerAttack01/MinecraftCommandGenerator/issues) page
 - Join our [Discord Community](https://discord.gg/your-invite-link)
 
 ## Contributing
@@ -50,4 +50,9 @@ We welcome contributions! Please see our [[Contributing Guidelines]] for more in
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/yourusername/minecraft-command-generator/blob/main/LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/ShockerAttack01/MinecraftCommandGenerator/blob/main/LICENSE) file for details.
+
+## Latest Updates
+- Added automatic wiki updates via GitHub Actions
+- Improved documentation structure
+- Enhanced search functionality 
