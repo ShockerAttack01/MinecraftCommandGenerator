@@ -30,6 +30,36 @@ jobs:
             markdown-link-check "$file"
           done
 
+      - name: Create wiki branch if not exists
+        uses: actions/github-script@v6
+        with:
+          script: |
+            try {
+              await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: 'wiki'
+              });
+            } catch (error) {
+              if (error.status === 404) {
+                // Create wiki branch from main
+                const mainBranch = await github.rest.repos.getBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  branch: 'main'
+                });
+                
+                await github.rest.git.createRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: 'refs/heads/wiki',
+                  sha: mainBranch.data.commit.sha
+                });
+              } else {
+                throw error;
+              }
+            }
+
       - name: Update wiki
         uses: actions/github-script@v6
         with:
@@ -48,14 +78,40 @@ jobs:
             
             // Update each file in the wiki
             for (const file of files) {
-              await github.rest.repos.createOrUpdateFileContents({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                path: `wiki/${file.name}`,
-                message: `Update wiki: ${file.name}`,
-                content: Buffer.from(file.content).toString('base64'),
-                branch: 'wiki'
-              });
+              try {
+                // Try to get existing file
+                const existingFile = await github.rest.repos.getContent({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  path: `wiki/${file.name}`,
+                  ref: 'wiki'
+                });
+                
+                // Update existing file
+                await github.rest.repos.createOrUpdateFileContents({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  path: `wiki/${file.name}`,
+                  message: `Update wiki: ${file.name}`,
+                  content: Buffer.from(file.content).toString('base64'),
+                  sha: existingFile.data.sha,
+                  branch: 'wiki'
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  // Create new file
+                  await github.rest.repos.createOrUpdateFileContents({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    path: `wiki/${file.name}`,
+                    message: `Create wiki: ${file.name}`,
+                    content: Buffer.from(file.content).toString('base64'),
+                    branch: 'wiki'
+                  });
+                } else {
+                  throw error;
+                }
+              }
             }
 
       - name: Create wiki issue on failure
