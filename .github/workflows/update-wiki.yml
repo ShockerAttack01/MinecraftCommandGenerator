@@ -30,26 +30,33 @@ jobs:
             markdown-link-check "$file"
           done
 
-      - name: Initialize wiki repository
-        run: |
-          mkdir wiki
-          cd wiki
-          git init
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          cp -r ../docs/wiki/*.md .
-          git add .
-          git commit -m "Update wiki from docs"
-          git branch -M main
-
-      - name: Push to wiki
-        uses: ad-m/github-push-action@master
+      - name: Update wiki
+        uses: actions/github-script@v6
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          directory: wiki
-          repository: ShockerAttack01/MinecraftCommandGenerator.wiki
-          branch: main
-          force: true
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Get all markdown files from docs/wiki
+            const wikiDir = path.join(process.env.GITHUB_WORKSPACE, 'docs/wiki');
+            const files = fs.readdirSync(wikiDir)
+              .filter(file => file.endsWith('.md'))
+              .map(file => ({
+                name: file,
+                content: fs.readFileSync(path.join(wikiDir, file), 'utf8')
+              }));
+            
+            // Update each file in the wiki
+            for (const file of files) {
+              await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: `wiki/${file.name}`,
+                message: `Update wiki: ${file.name}`,
+                content: Buffer.from(file.content).toString('base64'),
+                branch: 'wiki'
+              });
+            }
 
       - name: Create wiki issue on failure
         if: failure()
