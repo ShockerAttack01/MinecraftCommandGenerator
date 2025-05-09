@@ -2,6 +2,9 @@ import customtkinter as ctk
 from typing import Dict, List, Optional
 from minecraft_data import TARGET_SELECTORS, VERSIONS, EFFECT_CATEGORIES, ITEM_CATEGORIES, COMMAND_TYPES
 from commands import GiveCommand, EffectCommand, GamemodeCommand, TeleportCommand
+from functools import partial
+import json
+import os
 
 class SearchBox(ctk.CTkFrame):
     """
@@ -146,6 +149,8 @@ class MinecraftCommandGenerator(ctk.CTk):
     This class creates the GUI for generating Minecraft commands and provides
     functionality for selecting command types, versions, and parameters.
     """
+    FAVORITES_FILE = "data/favorites.json"  # File to store favorites
+
     def __init__(self):
         """
         Initialize the application.
@@ -159,29 +164,38 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.main_frame = ctk.CTkFrame(self)
         self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Create the top bar for home and settings buttons
+        # Create a dictionary to store favorite commands
+        self.favorite_commands = set()
+
+        # Update the top bar layout
         self.top_bar = ctk.CTkFrame(self.main_frame, height=40)
         self.top_bar.pack(fill="x", padx=5, pady=5)
 
-        # Create the home button in the top-left corner
         self.home_button = ctk.CTkButton(
-            self.top_bar,
-            text="Home",
-            width=80,
-            height=30,
-            command=self.show_home_page
+            self.top_bar, text="Home", width=80, height=30, command=self.show_home_page
         )
         self.home_button.pack(side="left", padx=5)
 
-        # Create the settings button in the top-right corner
+        # Create a horizontally scrollable frame for command buttons
+        self.command_slider_frame = ctk.CTkScrollableFrame(
+            self.top_bar, height=40, orientation="horizontal"
+        )
+        self.command_slider_frame.pack(side="left", fill="x", expand=True, padx=5)
+
+        # Bind mouse wheel events for horizontal scrolling
+        self.command_slider_frame._parent_canvas.bind("<Enter>", self.bind_horizontal_scroll)
+        self.command_slider_frame._parent_canvas.bind("<Leave>", self.unbind_horizontal_scroll)
+
+        # Add command buttons to the slider
+        self.add_command_buttons()
+
         self.settings_button = ctk.CTkButton(
-            self.top_bar,
-            text="⚙️ Settings",
-            width=80,
-            height=30,
-            command=self.open_settings
+            self.top_bar, text="⚙️ Settings", width=80, height=30, command=self.open_settings
         )
         self.settings_button.pack(side="right", padx=5)
+
+        # Add command buttons to the slider
+        self.add_command_buttons()
 
         # Create the command type selector
         self.command_type_frame = ctk.CTkFrame(self.main_frame)
@@ -199,12 +213,6 @@ class MinecraftCommandGenerator(ctk.CTk):
         )
         self.command_type_dropdown.pack(side="left", padx=5)
 
-        # Add buttons for all command types below the version selector
-        self.command_buttons_frame = ctk.CTkFrame(self.main_frame)
-        self.command_buttons_frame.pack(fill="x", padx=5, pady=5)
-
-        self.add_command_buttons()
-        
         # Bind the command type variable to actively update the UI
         self.command_type_var.trace_add("write", self.on_command_type_change)
 
@@ -268,22 +276,81 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.all_effects.sort()
         self.all_formatted_effects = [effect.replace("_", " ").title() for effect in self.all_effects]
         
+        # Ensure the directory for the favorites file exists
+        os.makedirs(os.path.dirname(self.FAVORITES_FILE), exist_ok=True)
+
+        # Load favorites from file
+        self.favorite_commands = self.load_favorites()
+
+    def bind_horizontal_scroll(self, event):
+        """
+        Bind the mouse wheel event to enable horizontal scrolling.
+        """
+        self.command_slider_frame._parent_canvas.bind_all("<MouseWheel>", self.scroll_horizontally)
+
+    def unbind_horizontal_scroll(self, event):
+        """
+        Unbind the mouse wheel event when the cursor leaves the frame.
+        """
+        self.command_slider_frame._parent_canvas.unbind_all("<MouseWheel>")
+
+    def scroll_horizontally(self, event):
+        """
+        Scroll the command slider horizontally based on mouse wheel movement.
+        """
+        scroll_speed = 20  # Increased scroll speed multiplier
+        self.command_slider_frame._parent_canvas.xview_scroll(-int(event.delta / 120 * scroll_speed), "units")
+
     def add_command_buttons(self):
         """
-        Add smaller buttons for all command types below the version selector.
+        Add command buttons to the slider, sorted alphabetically, with favorite functionality.
         """
-        for widget in self.command_buttons_frame.winfo_children():
+        for widget in self.command_slider_frame.winfo_children():
             widget.destroy()
 
-        for command_type in COMMAND_TYPES.keys():
+        # Sort commands alphabetically, with favorites first
+        sorted_commands = sorted(COMMAND_TYPES.keys(), key=lambda c: (c not in self.favorite_commands, c))
+
+        for command_type in sorted_commands:
+            frame = ctk.CTkFrame(self.command_slider_frame, height=30, width=130)
+            frame.pack(side="left", padx=5, pady=5)
+
             button = ctk.CTkButton(
-                self.command_buttons_frame,
+                frame,
                 text=command_type.capitalize(),
                 width=100,
                 height=30,
-                command=lambda c=command_type: self.on_command_change(c)
+                command=partial(self.on_command_change, command_type),
             )
-            button.pack(side="left", padx=5, pady=5)
+            button.pack(side="left")
+
+            favorite_button = ctk.CTkButton(
+                frame,
+                text="⭐" if command_type in self.favorite_commands else "☆",
+                width=30,
+                height=30,
+                command=partial(self.toggle_favorite, command_type),
+            )
+            favorite_button.pack(side="left")
+
+        # Ensure buttons do not interfere with scrolling
+        for widget in self.command_slider_frame.winfo_children():
+            widget.bind("<MouseWheel>", lambda e: self.scroll_horizontally(e))
+
+    def toggle_favorite(self, command_type: str):
+        """
+        Toggle the favorite status of a command.
+        """
+        if command_type in self.favorite_commands:
+            self.favorite_commands.remove(command_type)
+        else:
+            self.favorite_commands.add(command_type)
+
+        # Save favorites to file
+        self.save_favorites()
+
+        # Refresh the command buttons
+        self.add_command_buttons()
 
     def open_settings(self):
         """
@@ -298,23 +365,11 @@ class MinecraftCommandGenerator(ctk.CTk):
         # Clear previous UI
         for widget in self.parameters_frame.winfo_children():
             widget.destroy()
-        for widget in self.command_buttons_frame.winfo_children():
-            widget.destroy()
-
-        # Add buttons for each command
-        for command_type in COMMAND_TYPES.keys():
-            button = ctk.CTkButton(
-                self.command_buttons_frame,
-                text=command_type.capitalize(),
-                width=100,
-                height=30,
-                command=lambda c=command_type: self.on_command_change(c)
-            )
-            button.pack(side="left", padx=5, pady=5)
 
         # Clear the command output and feedback
         self.command_text.delete("1.0", "end")
         self.feedback_text.delete("1.0", "end")
+        self.add_command_buttons()
 
     def on_command_type_change(self, *args):
         """
@@ -334,10 +389,6 @@ class MinecraftCommandGenerator(ctk.CTk):
             command_type (str): The selected command type.
         """
         self.command_type_var.set(command_type)  # Update the dropdown value
-
-        # Clear the command buttons frame
-        for widget in self.command_buttons_frame.winfo_children():
-            widget.destroy()
 
         # Clear previous command UI
         for widget in self.parameters_frame.winfo_children():
@@ -396,6 +447,36 @@ class MinecraftCommandGenerator(ctk.CTk):
         feedback = self.current_command.get_feedback()
         self.feedback_text.delete("1.0", "end")
         self.feedback_text.insert("1.0", "\n".join(feedback))
+
+    def load_favorites(self) -> set:
+        """
+        Load favorite commands from a JSON file.
+        If the file doesn't exist, create it with an empty set.
+        Returns:
+            set: A set of favorite commands.
+        """
+        if not os.path.exists(self.FAVORITES_FILE):
+            # Create an empty JSON file if it doesn't exist
+            with open(self.FAVORITES_FILE, "w") as file:
+                json.dump([], file)
+            return set()
+
+        try:
+            with open(self.FAVORITES_FILE, "r") as file:
+                return set(json.load(file))
+        except (json.JSONDecodeError, IOError):
+            print("Failed to load favorites. Starting with an empty set.")
+            return set()
+
+    def save_favorites(self):
+        """
+        Save favorite commands to a JSON file.
+        """
+        try:
+            with open(self.FAVORITES_FILE, "w") as file:
+                json.dump(list(self.favorite_commands), file)
+        except IOError:
+            print("Failed to save favorites.")
 
 if __name__ == "__main__":
     app = MinecraftCommandGenerator()
