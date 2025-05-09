@@ -19,6 +19,9 @@ class BaseCommand:
         
         # Let child classes set up their UI
         self.setup_ui()
+        
+        # Initialize feedback
+        self.on_parameter_change(None)
     
     def setup_ui(self):
         """Set up the UI elements for the command. To be overridden by child classes."""
@@ -119,9 +122,9 @@ class BaseCommand:
         # Get current parameter values
         params = {param: self.get_parameter_value(param) for param in self.command_data["parameters"]}
         
-        # Add command summary if available
-        if "summary" in self.command_data:
-            feedback.append(self.command_data["summary"](params))
+        # Add command summary using CommandSummarizer
+        feedback.append(CommandSummarizer.summarize(self.command_type, params))
+        feedback.append("")
         
         # Add parameter feedback
         for param in self.command_data["parameters"]:

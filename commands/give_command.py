@@ -13,13 +13,17 @@ Key Features:
 - NBT data input
 - Real-time command validation and feedback
 - Sorted item categories and suggestions
+- Version-based item filtering
 """
 
 import customtkinter as ctk
 from typing import Dict, List, Tuple, Any
 from .base_command import BaseCommand
-from minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, COMMAND_TYPES
+from minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, COMMAND_TYPES, ITEM_TAGS, ITEM_VERSIONS, VERSIONS
+from command_summarizer import CommandSummarizer
 import re
+import threading
+import time
 
 class GiveCommand(BaseCommand):
     """
@@ -34,6 +38,9 @@ class GiveCommand(BaseCommand):
         all_formatted_items (List[str]): List of formatted item names for display
         category_var (StringVar): Tkinter variable for the selected category
         suggestions_frame (CTkScrollableFrame): Frame containing item suggestions
+        version_var (StringVar): Tkinter variable for the selected Minecraft version
+        loading_thread (Thread): Thread for loading item suggestions
+        is_loading (bool): Flag indicating if suggestions are being loaded
     """
     
     def __init__(self, master: ctk.CTkFrame, command_data: Dict[str, Any], all_formatted_items: List[str]):
@@ -70,9 +77,39 @@ class GiveCommand(BaseCommand):
                 self.all_items.append(raw_item)
                 self.all_formatted_items.append(item)
         
+        # Create item data structure with tags and versions
+        self.item_data = []
+        for formatted_item, raw_item in zip(self.all_formatted_items, self.all_items):
+            # Get tags from ITEM_TAGS or create default tags
+            tags = ITEM_TAGS.get(raw_item, set())
+            if not tags:
+                # Add category as a tag
+                for category, items in self.item_categories.items():
+                    if raw_item in items:
+                        tags.add(category.lower())
+                # Add words from item name as tags
+                words = raw_item.split('_')
+                tags.update(words)
+                # Add formatted name words as tags
+                formatted_words = formatted_item.lower().split()
+                tags.update(formatted_words)
+            
+            # Get version from ITEM_VERSIONS or default to 1.0
+            version = ITEM_VERSIONS.get(raw_item, "1.0")
+            
+            self.item_data.append({
+                'formatted': formatted_item,
+                'raw': raw_item,
+                'tags': tags,
+                'version': version
+            })
+        
         # Sort items alphabetically
-        sorted_pairs = sorted(zip(self.all_formatted_items, self.all_items))
-        self.all_formatted_items, self.all_items = zip(*sorted_pairs)
+        self.item_data.sort(key=lambda x: x['formatted'])
+        
+        # Initialize loading state
+        self.is_loading = False
+        self.loading_thread = None
         
         super().__init__(master, "give", command_data)
     
@@ -82,15 +119,21 @@ class GiveCommand(BaseCommand):
         
         Creates and arranges the following components:
         1. Player input with target selector
-        2. Item search with category selector
-        3. Amount input
-        4. NBT input
-        5. Initial item suggestions
+        2. Version selector
+        3. Item search with category selector
+        4. Amount input
+        5. NBT input
+        6. Initial item suggestions
         """
         # Create player parameter with target selector
         player_frame = ctk.CTkFrame(self.param_frame)
         player_frame.pack(fill="x", padx=5, pady=2)
         self.create_player_input(player_frame)
+        
+        # Create version selector
+        version_frame = ctk.CTkFrame(self.param_frame)
+        version_frame.pack(fill="x", padx=5, pady=2)
+        self.create_version_selector(version_frame)
         
         # Create item parameter with search box and category selector
         item_frame = ctk.CTkFrame(self.param_frame)
@@ -129,7 +172,6 @@ class GiveCommand(BaseCommand):
         # Create entry field
         entry = ctk.CTkEntry(frame)
         entry.pack(side="left", fill="x", expand=True, padx=5)
-        entry.bind("<KeyRelease>", self.on_parameter_change)
         
         # Create dropdown for target selectors
         selector_var = ctk.StringVar()
@@ -146,6 +188,52 @@ class GiveCommand(BaseCommand):
             "selector": selector_var,
             "entry": entry
         }
+        
+        # Bind events to update feedback
+        entry.bind("<KeyRelease>", lambda e: self.on_parameter_change(e))
+        entry.bind("<FocusOut>", lambda e: self.on_parameter_change(e))
+        
+        # Initialize feedback
+        self.on_parameter_change(None)
+    
+    def create_version_selector(self, frame: ctk.CTkFrame):
+        """
+        Create the version selector dropdown.
+        
+        Args:
+            frame (CTkFrame): The parent frame for the version selector
+        
+        Components:
+        - Label: "Version:"
+        - Dropdown: For selecting Minecraft version
+        """
+        # Add label
+        label = ctk.CTkLabel(frame, text="Version:")
+        label.pack(side="left", padx=5)
+        
+        # Create version selector
+        self.version_var = ctk.StringVar(value=VERSIONS[0])  # Default to latest version
+        version_dropdown = ctk.CTkOptionMenu(
+            frame,
+            values=VERSIONS,
+            variable=self.version_var,
+            command=self.on_version_change
+        )
+        version_dropdown.pack(side="left", padx=5)
+    
+    def on_version_change(self, version: str):
+        """
+        Handle version selection change.
+        
+        Args:
+            version (str): The newly selected version
+        
+        Process:
+        1. Updates suggestions based on selected version
+        2. Triggers command update
+        """
+        self.update_suggestions()
+        self.on_parameter_change()
     
     def create_item_search(self, frame: ctk.CTkFrame):
         """
@@ -210,10 +298,16 @@ class GiveCommand(BaseCommand):
         entry = ctk.CTkEntry(frame)
         entry.pack(side="left", fill="x", expand=True, padx=5)
         entry.insert(0, "1")  # Default amount
-        entry.bind("<KeyRelease>", self.on_parameter_change)
         
         # Store the entry widget
         self.parameter_vars["amount"] = entry
+        
+        # Bind events to update feedback
+        entry.bind("<KeyRelease>", lambda e: self.on_parameter_change(e))
+        entry.bind("<FocusOut>", lambda e: self.on_parameter_change(e))
+        
+        # Initialize feedback
+        self.on_parameter_change(None)
     
     def create_nbt_input(self, frame: ctk.CTkFrame):
         """
@@ -233,54 +327,155 @@ class GiveCommand(BaseCommand):
         # Create entry field
         entry = ctk.CTkEntry(frame)
         entry.pack(side="left", fill="x", expand=True, padx=5)
-        entry.bind("<KeyRelease>", self.on_parameter_change)
         
         # Store the entry widget
         self.parameter_vars["nbt"] = entry
+        
+        # Bind events to update feedback
+        entry.bind("<KeyRelease>", lambda e: self.on_parameter_change(e))
+        entry.bind("<FocusOut>", lambda e: self.on_parameter_change(e))
+        
+        # Initialize feedback
+        self.on_parameter_change(None)
     
     def update_suggestions(self, search_text: str = ""):
         """
-        Update the item suggestions based on search text and selected category.
+        Update the item suggestions based on search text, selected category, and version.
         
         Args:
             search_text (str): The text to filter items by (default: "")
         
         Process:
         1. Clears existing suggestions
-        2. Gets items based on selected category
-        3. Filters items based on search text
-        4. Creates buttons for up to 10 matching items
+        2. Gets items based on selected category and version
+        3. Filters items based on search text and tags
+        4. Creates buttons for matching items
         """
         # Clear previous suggestions
         for widget in self.suggestions_frame.winfo_children():
             widget.destroy()
         
         selected_category = self.category_var.get()
+        selected_version = self.version_var.get()
+        search_text = search_text.lower()
         
-        # Determine which items to show
-        if selected_category == "All Categories":
-            items_to_show = zip(self.all_formatted_items, self.all_items)
-        else:
-            # Get items from selected category and sort them
-            category_items = self.item_categories[selected_category]
-            formatted_items = [item.replace("_", " ").title() for item in category_items]
-            sorted_pairs = sorted(zip(formatted_items, category_items))
-            items_to_show = sorted_pairs
+        # Start loading in background thread
+        if self.loading_thread and self.loading_thread.is_alive():
+            self.is_loading = False
+            self.loading_thread.join()
         
-        # Filter and show items
+        self.is_loading = True
+        self.loading_thread = threading.Thread(
+            target=self._load_suggestions,
+            args=(selected_category, selected_version, search_text)
+        )
+        self.loading_thread.start()
+    
+    def _load_suggestions(self, category: str, version: str, search_text: str):
+        """
+        Load suggestions in a background thread.
+        
+        Args:
+            category (str): Selected category
+            version (str): Selected version
+            search_text (str): Search text
+        """
+        # Filter items based on category, version, and search
         matches = []
-        for formatted_item, raw_item in items_to_show:
-            if not search_text or search_text in formatted_item.lower() or search_text in raw_item:
-                matches.append((formatted_item, raw_item))
+        for item in self.item_data:
+            # Check category filter
+            if category != "All Categories":
+                if item['raw'] not in self.item_categories[category]:
+                    continue
+            
+            # Check version filter
+            if self._compare_versions(item['version'], version) > 0:
+                continue
+            
+            # Check search text
+            if not search_text:
+                matches.append(item)
+            else:
+                # Check if search text matches any tag
+                if any(search_text in tag for tag in item['tags']):
+                    matches.append(item)
+                # Also check if it matches the formatted or raw name
+                elif search_text in item['formatted'].lower() or search_text in item['raw']:
+                    matches.append(item)
+            
+            # Add a small delay to prevent UI freezing
+            if len(matches) % 10 == 0:
+                time.sleep(0.001)
+                if not self.is_loading:
+                    return
         
-        # Show up to 10 suggestions
-        for formatted_item, raw_item in matches[:10]:
+        # Sort matches by tag priority
+        if search_text:
+            matches.sort(key=lambda x: (
+                # First priority: exact tag match
+                not any(search_text == tag for tag in x['tags']),
+                # Second priority: tag contains search text
+                not any(search_text in tag for tag in x['tags']),
+                # Third priority: formatted name contains search text
+                search_text not in x['formatted'].lower(),
+                # Fourth priority: raw name contains search text
+                search_text not in x['raw'],
+                # Finally sort alphabetically
+                x['formatted']
+            ))
+        
+        # Create buttons in the main thread
+        self.master.after(0, self._create_suggestion_buttons, matches)
+    
+    def _create_suggestion_buttons(self, matches: List[Dict[str, Any]]):
+        """
+        Create suggestion buttons in the main thread.
+        
+        Args:
+            matches (List[Dict[str, Any]]): List of matching items
+        """
+        if not self.is_loading:
+            return
+            
+        for item in matches:
+            if not self.is_loading:
+                return
+                
             btn = ctk.CTkButton(
                 self.suggestions_frame,
-                text=formatted_item,
-                command=lambda f=formatted_item, r=raw_item: self.on_item_selected(f, r)
+                text=f"{item['formatted']} ({item['version']})",
+                command=lambda f=item['formatted'], r=item['raw']: self.on_item_selected(f, r)
             )
             btn.pack(fill="x", padx=5, pady=1)
+            
+            # Add a small delay to prevent UI freezing
+            if len(self.suggestions_frame.winfo_children()) % 10 == 0:
+                time.sleep(0.001)
+    
+    def _compare_versions(self, version1: str, version2: str) -> int:
+        """
+        Compare two version strings.
+        
+        Args:
+            version1 (str): First version string
+            version2 (str): Second version string
+            
+        Returns:
+            int: 1 if version1 > version2, -1 if version1 < version2, 0 if equal
+        """
+        v1_parts = [int(x) for x in version1.split('.')]
+        v2_parts = [int(x) for x in version2.split('.')]
+        
+        for i in range(max(len(v1_parts), len(v2_parts))):
+            v1 = v1_parts[i] if i < len(v1_parts) else 0
+            v2 = v2_parts[i] if i < len(v2_parts) else 0
+            
+            if v1 > v2:
+                return 1
+            elif v1 < v2:
+                return -1
+        
+        return 0
     
     def on_category_change(self, category: str):
         """
@@ -401,8 +596,13 @@ class GiveCommand(BaseCommand):
             feedback.append("⚠️ Command is incomplete. Please fill in player and item.")
             return feedback
             
-        # Add command description
-        feedback.append(f"📝 {self.command_data['description']}")
+        # Add command summary using CommandSummarizer
+        params = {
+            "player": self.get_parameter_value("player"),
+            "item": self.get_parameter_value("item"),
+            "amount": self.get_parameter_value("amount")
+        }
+        feedback.append(CommandSummarizer.summarize("give", params))
         feedback.append("")
         
         # Player validation
@@ -441,4 +641,11 @@ class GiveCommand(BaseCommand):
                 if param in self.command_data["feedback"]:
                     feedback.append(f"• {param}: {self.command_data['feedback'][param]}")
                     
-        return feedback 
+        return feedback
+
+    def on_parameter_change(self, event=None):
+        """Handle changes to parameter values."""
+        # Update command and feedback
+        self.update_command()
+        if hasattr(self.master, "master") and hasattr(self.master.master, "update_command"):
+            self.master.master.update_command() 

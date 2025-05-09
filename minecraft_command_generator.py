@@ -99,7 +99,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         super().__init__()
         
         self.title("Minecraft Command Generator")
-        self.geometry("800x600")
+        self.geometry("1200x800")  # Increased window size
         
         # Create main frame
         self.main_frame = ctk.CTkFrame(self)
@@ -158,7 +158,7 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.feedback_label = ctk.CTkLabel(self.feedback_frame, text="Feedback:")
         self.feedback_label.pack(side="left", padx=5)
         
-        self.feedback_text = ctk.CTkTextbox(self.feedback_frame)
+        self.feedback_text = ctk.CTkTextbox(self.feedback_frame, height=200)  # Increased height
         self.feedback_text.pack(side="left", fill="both", expand=True, padx=5)
         
         # Initialize command instance
