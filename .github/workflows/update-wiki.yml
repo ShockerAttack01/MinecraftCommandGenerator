@@ -1,0 +1,32 @@
+name: Update Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/wiki/**'
+
+jobs:
+  update-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Checkout wiki
+        uses: actions/checkout@v3
+        with:
+          repository: ShockerAttack01/MinecraftCommandGenerator.wiki
+          path: wiki
+
+      - name: Update wiki files
+        run: |
+          cp -r docs/wiki/*.md wiki/
+          cd wiki
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update wiki from docs" && git push) 
