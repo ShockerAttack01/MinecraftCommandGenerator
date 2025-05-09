@@ -20,16 +20,29 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
-venv/
-ENV/
-env/
-
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Wiki
+MinecraftCommandGenerator.wiki/
+
+# Logs
+*.log
+
+# Virtual Environment
+venv/
+ENV/
+env/
 
 # Project specific
 scripts/
