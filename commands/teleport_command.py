@@ -1,14 +1,24 @@
 import customtkinter as ctk
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Any
 from .base_command import BaseCommand
 from minecraft_data import TARGET_SELECTORS
 import re
 
 class TeleportCommand(BaseCommand):
+    """Command class for generating Minecraft /tp (teleport) commands."""
+    
     def __init__(self, master: ctk.CTkFrame, command_data: Dict[str, Any]):
+        """
+        Initialize the teleport command interface.
+        
+        Args:
+            master (CTkFrame): The parent frame for the command UI.
+            command_data (Dict[str, Any]): Command configuration data.
+        """
         super().__init__(master, command_data)
         
-    def setup_ui(self):
+    def setup_ui(self) -> None:
+        """Set up the UI elements for the teleport command."""
         # Target parameter
         target_frame = self.create_parameter_frame("target")
         self.create_target_selector(target_frame, "target")
@@ -77,6 +87,12 @@ class TeleportCommand(BaseCommand):
         self.parameter_vars["rotation"] = (yaw_entry, pitch_entry)
         
     def get_command(self) -> str:
+        """
+        Generate the /tp command string based on current parameters.
+        
+        Returns:
+            str: The generated command string.
+        """
         command_parts = ["tp"]
         
         # Target
@@ -109,6 +125,12 @@ class TeleportCommand(BaseCommand):
         return " ".join(command_parts)
         
     def get_feedback(self) -> List[str]:
+        """
+        Generate feedback for the current command state.
+        
+        Returns:
+            List[str]: Feedback messages.
+        """
         feedback = []
         command_parts = self.get_command().split()
         
@@ -161,4 +183,4 @@ class TeleportCommand(BaseCommand):
                 if param in self.command_data["feedback"]:
                     feedback.append(f"• {param}: {self.command_data['feedback'][param]}")
                     
-        return feedback 
+        return feedback

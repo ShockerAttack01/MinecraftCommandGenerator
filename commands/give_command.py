@@ -4,8 +4,6 @@ GiveCommand Module
 This module implements the Minecraft /give command interface, providing a user-friendly way to generate
 give commands with item search, category filtering, and parameter validation.
 
-The command follows the format: /give <player> <item> [amount] [nbt]
-
 Key Features:
 - Player selection with target selectors (@a, @p, @e, @r, @s)
 - Item search with category filtering
@@ -19,7 +17,7 @@ Key Features:
 import customtkinter as ctk
 from typing import Dict, List, Tuple, Any
 from .base_command import BaseCommand
-from minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, COMMAND_TYPES, ITEM_TAGS, ITEM_VERSIONS, VERSIONS
+from minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, ITEM_TAGS, ITEM_VERSIONS, VERSIONS
 from command_summarizer import CommandSummarizer
 import re
 import threading
@@ -31,16 +29,6 @@ class GiveCommand(BaseCommand):
     
     This class extends BaseCommand to provide a specialized interface for the /give command,
     including item search, category filtering, and parameter validation.
-    
-    Attributes:
-        item_categories (Dict[str, List[str]]): Dictionary mapping category names to lists of item IDs
-        all_items (List[str]): List of all available item IDs
-        all_formatted_items (List[str]): List of formatted item names for display
-        category_var (StringVar): Tkinter variable for the selected category
-        suggestions_frame (CTkScrollableFrame): Frame containing item suggestions
-        version_var (StringVar): Tkinter variable for the selected Minecraft version
-        loading_thread (Thread): Thread for loading item suggestions
-        is_loading (bool): Flag indicating if suggestions are being loaded
     """
     
     def __init__(self, master: ctk.CTkFrame, command_data: Dict[str, Any], all_formatted_items: List[str]):
@@ -48,29 +36,17 @@ class GiveCommand(BaseCommand):
         Initialize the give command interface.
         
         Args:
-            master (CTkFrame): The parent frame for the command UI
-            command_data (Dict[str, Any]): Command configuration data
-            all_formatted_items (List[str]): List of all available items in display format
-        
-        The initialization process:
-        1. Collects all items from categories
-        2. Adds any additional items from all_formatted_items
-        3. Sorts items alphabetically
-        4. Sets up the UI components
+            master (CTkFrame): The parent frame for the command UI.
+            command_data (Dict[str, Any]): Command configuration data.
+            all_formatted_items (List[str]): List of all available items in display format.
         """
         # Process all items and categories
         self.item_categories = ITEM_CATEGORIES
+        category_items = set(item for items in self.item_categories.values() for item in items)
         
-        # First collect all items from categories
-        category_items = set()
-        for items in self.item_categories.values():
-            category_items.update(items)
-        
-        # Then add any additional items from all_formatted_items
+        # Add additional items from all_formatted_items
         self.all_items = list(category_items)
         self.all_formatted_items = [item.replace("_", " ").title() for item in self.all_items]
-        
-        # Add any items from all_formatted_items that aren't in categories
         for item in all_formatted_items:
             raw_item = item.lower().replace(" ", "_")
             if raw_item not in category_items:
@@ -78,33 +54,15 @@ class GiveCommand(BaseCommand):
                 self.all_formatted_items.append(item)
         
         # Create item data structure with tags and versions
-        self.item_data = []
-        for formatted_item, raw_item in zip(self.all_formatted_items, self.all_items):
-            # Get tags from ITEM_TAGS or create default tags
-            tags = ITEM_TAGS.get(raw_item, set())
-            if not tags:
-                # Add category as a tag
-                for category, items in self.item_categories.items():
-                    if raw_item in items:
-                        tags.add(category.lower())
-                # Add words from item name as tags
-                words = raw_item.split('_')
-                tags.update(words)
-                # Add formatted name words as tags
-                formatted_words = formatted_item.lower().split()
-                tags.update(formatted_words)
-            
-            # Get version from ITEM_VERSIONS or default to 1.0
-            version = ITEM_VERSIONS.get(raw_item, "1.0")
-            
-            self.item_data.append({
+        self.item_data = [
+            {
                 'formatted': formatted_item,
                 'raw': raw_item,
-                'tags': tags,
-                'version': version
-            })
-        
-        # Sort items alphabetically
+                'tags': ITEM_TAGS.get(raw_item, set()) | set(raw_item.split('_')) | set(formatted_item.lower().split()),
+                'version': ITEM_VERSIONS.get(raw_item, "1.0")
+            }
+            for formatted_item, raw_item in zip(self.all_formatted_items, self.all_items)
+        ]
         self.item_data.sort(key=lambda x: x['formatted'])
         
         # Initialize loading state
@@ -113,7 +71,7 @@ class GiveCommand(BaseCommand):
         
         super().__init__(master, "give", command_data)
     
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         """
         Set up the UI elements for the give command.
         
@@ -123,7 +81,6 @@ class GiveCommand(BaseCommand):
         3. Item search with category selector
         4. Amount input
         5. NBT input
-        6. Initial item suggestions
         """
         # Create player parameter with target selector
         player_frame = ctk.CTkFrame(self.param_frame)
@@ -153,17 +110,12 @@ class GiveCommand(BaseCommand):
         # Show initial suggestions
         self.update_suggestions()
     
-    def create_player_input(self, frame: ctk.CTkFrame):
+    def create_player_input(self, frame: ctk.CTkFrame) -> None:
         """
         Create the player input section with target selector.
         
         Args:
-            frame (CTkFrame): The parent frame for the player input
-        
-        Components:
-        - Label: "Player:"
-        - Entry field: For manual player name input
-        - Dropdown: For target selector selection (@a, @p, @e, @r, @s)
+            frame (CTkFrame): The parent frame for the player input.
         """
         # Add label
         label = ctk.CTkLabel(frame, text="Player:")
@@ -196,16 +148,12 @@ class GiveCommand(BaseCommand):
         # Initialize feedback
         self.on_parameter_change(None)
     
-    def create_version_selector(self, frame: ctk.CTkFrame):
+    def create_version_selector(self, frame: ctk.CTkFrame) -> None:
         """
         Create the version selector dropdown.
         
         Args:
-            frame (CTkFrame): The parent frame for the version selector
-        
-        Components:
-        - Label: "Version:"
-        - Dropdown: For selecting Minecraft version
+            frame (CTkFrame): The parent frame for the version selector.
         """
         # Add label
         label = ctk.CTkLabel(frame, text="Version:")
@@ -221,32 +169,22 @@ class GiveCommand(BaseCommand):
         )
         version_dropdown.pack(side="left", padx=5)
     
-    def on_version_change(self, version: str):
+    def on_version_change(self, version: str) -> None:
         """
         Handle version selection change.
         
         Args:
-            version (str): The newly selected version
-        
-        Process:
-        1. Updates suggestions based on selected version
-        2. Triggers command update
+            version (str): The newly selected version.
         """
         self.update_suggestions()
         self.on_parameter_change()
     
-    def create_item_search(self, frame: ctk.CTkFrame):
+    def create_item_search(self, frame: ctk.CTkFrame) -> None:
         """
         Create the item search interface with category selector.
         
         Args:
-            frame (CTkFrame): The parent frame for the item search
-        
-        Components:
-        - Label: "Item:"
-        - Category dropdown: For filtering items by category
-        - Search entry: For searching items
-        - Suggestions frame: Scrollable frame showing matching items
+            frame (CTkFrame): The parent frame for the item search.
         """
         # Create a frame for the search box and category selector
         search_frame = ctk.CTkFrame(frame)
@@ -279,16 +217,12 @@ class GiveCommand(BaseCommand):
         # Store the entry widget
         self.parameter_vars["item"] = entry
     
-    def create_amount_input(self, frame: ctk.CTkFrame):
+    def create_amount_input(self, frame: ctk.CTkFrame) -> None:
         """
         Create the amount input field.
         
         Args:
-            frame (CTkFrame): The parent frame for the amount input
-        
-        Components:
-        - Label: "Amount:"
-        - Entry field: For specifying item quantity (defaults to 1)
+            frame (CTkFrame): The parent frame for the amount input.
         """
         # Add label
         label = ctk.CTkLabel(frame, text="Amount:")
@@ -309,16 +243,12 @@ class GiveCommand(BaseCommand):
         # Initialize feedback
         self.on_parameter_change(None)
     
-    def create_nbt_input(self, frame: ctk.CTkFrame):
+    def create_nbt_input(self, frame: ctk.CTkFrame) -> None:
         """
         Create the NBT input field.
         
         Args:
-            frame (CTkFrame): The parent frame for the NBT input
-        
-        Components:
-        - Label: "NBT:"
-        - Entry field: For specifying NBT data
+            frame (CTkFrame): The parent frame for the NBT input.
         """
         # Add label
         label = ctk.CTkLabel(frame, text="NBT:")
@@ -338,18 +268,12 @@ class GiveCommand(BaseCommand):
         # Initialize feedback
         self.on_parameter_change(None)
     
-    def update_suggestions(self, search_text: str = ""):
+    def update_suggestions(self, search_text: str = "") -> None:
         """
         Update the item suggestions based on search text, selected category, and version.
         
         Args:
-            search_text (str): The text to filter items by (default: "")
-        
-        Process:
-        1. Clears existing suggestions
-        2. Gets items based on selected category and version
-        3. Filters items based on search text and tags
-        4. Creates buttons for matching items
+            search_text (str): The text to filter items by (default: "").
         """
         # Clear previous suggestions
         for widget in self.suggestions_frame.winfo_children():
@@ -371,14 +295,14 @@ class GiveCommand(BaseCommand):
         )
         self.loading_thread.start()
     
-    def _load_suggestions(self, category: str, version: str, search_text: str):
+    def _load_suggestions(self, category: str, version: str, search_text: str) -> None:
         """
         Load suggestions in a background thread.
         
         Args:
-            category (str): Selected category
-            version (str): Selected version
-            search_text (str): Search text
+            category (str): Selected category.
+            version (str): Selected version.
+            search_text (str): Search text.
         """
         # Filter items based on category, version, and search
         matches = []
@@ -427,12 +351,12 @@ class GiveCommand(BaseCommand):
         # Create buttons in the main thread
         self.master.after(0, self._create_suggestion_buttons, matches)
     
-    def _create_suggestion_buttons(self, matches: List[Dict[str, Any]]):
+    def _create_suggestion_buttons(self, matches: List[Dict[str, Any]]) -> None:
         """
         Create suggestion buttons in the main thread.
         
         Args:
-            matches (List[Dict[str, Any]]): List of matching items
+            matches (List[Dict[str, Any]]): List of matching items.
         """
         if not self.is_loading:
             return
@@ -457,11 +381,11 @@ class GiveCommand(BaseCommand):
         Compare two version strings.
         
         Args:
-            version1 (str): First version string
-            version2 (str): Second version string
+            version1 (str): First version string.
+            version2 (str): Second version string.
             
         Returns:
-            int: 1 if version1 > version2, -1 if version1 < version2, 0 if equal
+            int: 1 if version1 > version2, -1 if version1 < version2, 0 if equal.
         """
         v1_parts = [int(x) for x in version1.split('.')]
         v2_parts = [int(x) for x in version2.split('.')]
@@ -477,17 +401,12 @@ class GiveCommand(BaseCommand):
         
         return 0
     
-    def on_category_change(self, category: str):
+    def on_category_change(self, category: str) -> None:
         """
         Handle category selection change.
         
         Args:
-            category (str): The newly selected category
-        
-        Process:
-        1. Clears current item selection
-        2. Updates suggestions for the new category
-        3. Triggers command update
+            category (str): The newly selected category.
         """
         # Clear current item selection
         self.parameter_vars["item"].delete(0, "end")
@@ -498,35 +417,24 @@ class GiveCommand(BaseCommand):
         self.update_suggestions()
         self.on_parameter_change()
     
-    def on_item_search(self, event):
+    def on_item_search(self, event) -> None:
         """
         Handle item search input.
         
         Args:
-            event: The key release event
-        
-        Process:
-        1. Gets current search text
-        2. Updates suggestions based on search
-        3. Triggers command update
+            event: The key release event.
         """
         search_text = self.parameter_vars["item"].get().lower()
         self.update_suggestions(search_text)
         self.on_parameter_change()
     
-    def on_item_selected(self, formatted_item: str, raw_item: str):
+    def on_item_selected(self, formatted_item: str, raw_item: str) -> None:
         """
         Handle item selection from suggestions.
         
         Args:
-            formatted_item (str): The formatted display name of the selected item
-            raw_item (str): The raw item ID for command generation
-        
-        Process:
-        1. Updates search box with selected item
-        2. Stores raw item ID for command generation
-        3. Updates suggestions
-        4. Triggers command update
+            formatted_item (str): The formatted display name of the selected item.
+            raw_item (str): The raw item ID for command generation.
         """
         self.parameter_vars["item"].delete(0, "end")
         self.parameter_vars["item"].insert(0, formatted_item)
@@ -539,14 +447,12 @@ class GiveCommand(BaseCommand):
         
         self.on_parameter_change()
     
-    def update_command(self):
+    def update_command(self) -> str:
         """
         Update the command output based on current parameter values.
         
         Returns:
-            str: The generated command string
-        
-        Format: /give <player> <item> [amount] [nbt]
+            str: The generated command string.
         """
         command_parts = [self.command_type]
         
@@ -580,13 +486,7 @@ class GiveCommand(BaseCommand):
         Get feedback about the current command state.
         
         Returns:
-            List[str]: List of feedback messages
-        
-        Feedback includes:
-        - Command description
-        - Parameter validation
-        - Item category information
-        - Command validity status
+            List[str]: List of feedback messages.
         """
         feedback = []
         command_parts = self.update_command().split()
@@ -643,7 +543,7 @@ class GiveCommand(BaseCommand):
                     
         return feedback
 
-    def on_parameter_change(self, event=None):
+    def on_parameter_change(self, event=None) -> None:
         """Handle changes to parameter values."""
         # Update command and feedback
         self.update_command()

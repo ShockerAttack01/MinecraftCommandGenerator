@@ -1,14 +1,24 @@
 import customtkinter as ctk
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Any
 from .base_command import BaseCommand
 from minecraft_data import TARGET_SELECTORS
 import re
 
 class GamemodeCommand(BaseCommand):
+    """Command class for generating Minecraft /gamemode commands."""
+    
     def __init__(self, master: ctk.CTkFrame, command_data: Dict[str, Any]):
+        """
+        Initialize the gamemode command interface.
+        
+        Args:
+            master (CTkFrame): The parent frame for the command UI.
+            command_data (Dict[str, Any]): Command configuration data.
+        """
         super().__init__(master, command_data)
         
-    def setup_ui(self):
+    def setup_ui(self) -> None:
+        """Set up the UI elements for the gamemode command."""
         # Player parameter
         player_frame = self.create_parameter_frame("player")
         self.create_target_selector(player_frame, "player")
@@ -26,6 +36,12 @@ class GamemodeCommand(BaseCommand):
         self.parameter_vars["gamemode"] = gamemode_var
         
     def get_command(self) -> str:
+        """
+        Generate the /gamemode command string based on current parameters.
+        
+        Returns:
+            str: The generated command string.
+        """
         command_parts = ["gamemode"]
         
         # Gamemode
@@ -42,6 +58,12 @@ class GamemodeCommand(BaseCommand):
         return " ".join(command_parts)
         
     def get_feedback(self) -> List[str]:
+        """
+        Generate feedback for the current command state.
+        
+        Returns:
+            List[str]: Feedback messages.
+        """
         feedback = []
         command_parts = self.get_command().split()
         
@@ -58,7 +80,7 @@ class GamemodeCommand(BaseCommand):
         gamemode = command_parts[1]
         valid_gamemodes = ["survival", "creative", "adventure", "spectator"]
         if gamemode not in valid_gamemodes:
-            feedback.append("⚠️ Invalid gamemode. Must be one of: survival, creative, adventure, spectator")
+            feedback.append("⚠️ Invalid gamemode. Must be one of: survival, creative, adventure, spectator.")
         else:
             feedback.append(f"🎮 Gamemode: {gamemode.title()}")
             
@@ -80,4 +102,4 @@ class GamemodeCommand(BaseCommand):
                 if param in self.command_data["feedback"]:
                     feedback.append(f"• {param}: {self.command_data['feedback'][param]}")
                     
-        return feedback 
+        return feedback

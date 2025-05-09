@@ -1,22 +1,21 @@
 import customtkinter as ctk
-from typing import Dict, List, Tuple, Any, Optional
-import re
-from minecraft_data import (
-    TARGET_SELECTORS,
-    VERSIONS,
-    EFFECT_CATEGORIES,
-    ITEM_CATEGORIES,
-    COMMAND_TYPES
-)
-from commands import (
-    GiveCommand,
-    EffectCommand,
-    GamemodeCommand,
-    TeleportCommand
-)
+from typing import Dict, List, Optional
+from minecraft_data import TARGET_SELECTORS, VERSIONS, EFFECT_CATEGORIES, ITEM_CATEGORIES, COMMAND_TYPES
+from commands import GiveCommand, EffectCommand, GamemodeCommand, TeleportCommand
 
 class SearchBox(ctk.CTkFrame):
+    """
+    A custom search box widget with suggestions.
+    """
     def __init__(self, master: ctk.CTkFrame, items: List[str], command: Optional[callable] = None):
+        """
+        Initialize the search box.
+        
+        Args:
+            master (CTkFrame): The parent frame.
+            items (List[str]): List of items to display as suggestions.
+            command (callable, optional): Callback function when an item is selected.
+        """
         super().__init__(master)
         self.items = items
         self.command = command
@@ -57,7 +56,13 @@ class SearchBox(ctk.CTkFrame):
     def on_focus_out(self, event):
         self.suggestions_frame.pack_forget()
         
-    def update_suggestions(self, items: List[str]):
+    def update_suggestions(self, items: List[str]) -> None:
+        """
+        Update the suggestion list.
+        
+        Args:
+            items (List[str]): List of items to display as suggestions.
+        """
         # Clear existing buttons
         for button in self.suggestion_buttons:
             button.destroy()
@@ -95,7 +100,13 @@ class SearchBox(ctk.CTkFrame):
         self.update_suggestions(items)
 
 class MinecraftCommandGenerator(ctk.CTk):
+    """
+    Main application class for the Minecraft Command Generator.
+    """
     def __init__(self):
+        """
+        Initialize the application.
+        """
         super().__init__()
         
         self.title("Minecraft Command Generator")
@@ -177,8 +188,13 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.all_effects.sort()
         self.all_formatted_effects = [effect.replace("_", " ").title() for effect in self.all_effects]
         
-    def on_command_change(self, command_type: str):
-        """Handle command type change."""
+    def on_command_change(self, command_type: str) -> None:
+        """
+        Handle command type change.
+        
+        Args:
+            command_type (str): The selected command type.
+        """
         # Clear previous command UI
         for widget in self.parameters_frame.winfo_children():
             widget.destroy()
@@ -205,13 +221,20 @@ class MinecraftCommandGenerator(ctk.CTk):
         self.update_command()
         
     def on_version_change(self, version: str):
-        """Handle version change."""
+        """
+        Handle version change.
+        
+        Args:
+            version (str): The selected Minecraft version.
+        """
         # Update command if needed
         if self.current_command:
             self.update_command()
             
-    def update_command(self, event=None):
-        """Update the command output and feedback."""
+    def update_command(self, event=None) -> None:
+        """
+        Update the command output and feedback.
+        """
         if not self.current_command:
             self.command_text.delete("1.0", "end")
             self.feedback_text.delete("1.0", "end")

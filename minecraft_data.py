@@ -1,3 +1,9 @@
+"""
+Minecraft Data Module
+
+This module contains data for Minecraft commands, items, effects, and versions.
+"""
+
 from command_summarizer import CommandSummarizer
 
 # Minecraft item and effect data

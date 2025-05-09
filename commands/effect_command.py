@@ -1,15 +1,26 @@
 import customtkinter as ctk
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Any
 from .base_command import BaseCommand
 from minecraft_data import TARGET_SELECTORS, EFFECT_CATEGORIES
 import re
 
 class EffectCommand(BaseCommand):
+    """Command class for generating Minecraft /effect commands."""
+    
     def __init__(self, master: ctk.CTkFrame, command_data: Dict[str, Any], all_formatted_effects: List[str]):
+        """
+        Initialize the effect command interface.
+        
+        Args:
+            master (CTkFrame): The parent frame for the command UI.
+            command_data (Dict[str, Any]): Command configuration data.
+            all_formatted_effects (List[str]): List of all available effects in display format.
+        """
         self.all_formatted_effects = all_formatted_effects
         super().__init__(master, command_data)
         
-    def setup_ui(self):
+    def setup_ui(self) -> None:
+        """Set up the UI elements for the effect command."""
         # Player parameter
         player_frame = self.create_parameter_frame("player")
         self.create_target_selector(player_frame, "player")
@@ -70,7 +81,14 @@ class EffectCommand(BaseCommand):
         hide_particles_dropdown.pack(side="left", fill="x", expand=True, padx=5)
         self.parameter_vars["hide_particles"] = hide_particles_var
         
-    def on_category_change(self, category: str, search_box: Any):
+    def on_category_change(self, category: str, search_box: Any) -> None:
+        """
+        Handle category selection change.
+        
+        Args:
+            category (str): The newly selected category.
+            search_box (SearchBox): The search box to update with filtered effects.
+        """
         if category == "Select Category":
             search_box.set_items(self.all_formatted_effects)
         else:
@@ -79,6 +97,12 @@ class EffectCommand(BaseCommand):
             search_box.set_items(formatted_effects)
             
     def get_command(self) -> str:
+        """
+        Generate the /effect command string based on current parameters.
+        
+        Returns:
+            str: The generated command string.
+        """
         command_parts = ["effect"]
         
         # Player
@@ -113,6 +137,12 @@ class EffectCommand(BaseCommand):
         return " ".join(command_parts)
         
     def get_feedback(self) -> List[str]:
+        """
+        Generate feedback for the current command state.
+        
+        Returns:
+            List[str]: Feedback messages.
+        """
         feedback = []
         command_parts = self.get_command().split()
         
@@ -168,4 +198,4 @@ class EffectCommand(BaseCommand):
                 if param in self.command_data["feedback"]:
                     feedback.append(f"• {param}: {self.command_data['feedback'][param]}")
                     
-        return feedback 
+        return feedback

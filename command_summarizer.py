@@ -5,7 +5,16 @@ class CommandSummarizer:
     
     @staticmethod
     def summarize(command_type: str, params: Dict[str, Any]) -> str:
-        """Generate a concise summary of what a command does."""
+        """
+        Generate a concise summary of what a command does.
+        
+        Args:
+            command_type (str): The type of the command (e.g., "give", "tp").
+            params (Dict[str, Any]): Parameters for the command.
+        
+        Returns:
+            str: A human-readable summary of the command.
+        """
         summaries = {
             "give": lambda p: f"🎁 Gives {p.get('amount', '1')}x {p.get('item', 'item')} to {p.get('player', 'target')}",
             "tp": lambda p: f"🚀 Teleports {p.get('player', 'target')} to {p.get('x', 'X')} {p.get('y', 'Y')} {p.get('z', 'Z')}",
@@ -21,6 +30,7 @@ class CommandSummarizer:
             "fill": lambda p: f"🏗️ Fills area from ({p.get('x1', 'X1')}, {p.get('y1', 'Y1')}, {p.get('z1', 'Z1')}) to ({p.get('x2', 'X2')}, {p.get('y2', 'Y2')}, {p.get('z2', 'Z2')}) with {p.get('block', 'specified block')}"
         }
         
+        # Return the summary if the command type exists, otherwise provide a generic message
         if command_type in summaries:
             return summaries[command_type](params)
-        return f"Executes the {command_type} command with specified parameters" 
+        return f"Executes the {command_type} command with specified parameters"
