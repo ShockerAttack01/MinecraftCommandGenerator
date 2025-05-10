@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from typing import Dict, Any, List, Optional
-from minecraft_data import COMMAND_TYPES, TARGET_SELECTORS
+from data.minecraft_data import TARGET_SELECTORS
 from command_summarizer import CommandSummarizer
 
 class BaseCommand:

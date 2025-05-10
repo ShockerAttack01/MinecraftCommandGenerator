@@ -3,7 +3,7 @@ from typing import Dict, List, Any
 
 from command_summarizer import CommandSummarizer
 from .base_command import BaseCommand
-from minecraft_data import TARGET_SELECTORS
+from data.minecraft_data import TARGET_SELECTORS
 import re
 
 class TeleportCommand(BaseCommand):

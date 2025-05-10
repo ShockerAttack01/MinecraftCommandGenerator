@@ -1,6 +1,6 @@
 import customtkinter as ctk
-from typing import Dict, List, Optional
-from minecraft_data import TARGET_SELECTORS, VERSIONS, EFFECT_CATEGORIES, ITEM_CATEGORIES, COMMAND_TYPES
+from typing import List, Optional
+from data.minecraft_data import VERSIONS, EFFECT_CATEGORIES, ITEM_CATEGORIES, COMMAND_TYPES
 from commands import GiveCommand, EffectCommand, GamemodeCommand, TeleportCommand
 from functools import partial
 import json

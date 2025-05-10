@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from typing import Dict, List, Any
 from .base_command import BaseCommand
-from minecraft_data import TARGET_SELECTORS, EFFECT_CATEGORIES
+from data.minecraft_data import TARGET_SELECTORS, EFFECT_CATEGORIES
 import re
 
 class EffectCommand(BaseCommand):

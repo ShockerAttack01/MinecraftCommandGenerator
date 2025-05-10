@@ -15,9 +15,9 @@ Key Features:
 """
 
 import customtkinter as ctk
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Any
 from .base_command import BaseCommand
-from minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, ITEM_TAGS, ITEM_VERSIONS, VERSIONS
+from data.minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, ITEM_TAGS, ITEM_VERSIONS, VERSIONS
 from command_summarizer import CommandSummarizer
 import re
 import threading
