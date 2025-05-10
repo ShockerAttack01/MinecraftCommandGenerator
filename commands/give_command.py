@@ -17,11 +17,12 @@ Key Features:
 import customtkinter as ctk
 from typing import Dict, List, Any
 from .base_command import BaseCommand
-from data.minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, ITEM_TAGS, ITEM_VERSIONS, VERSIONS, ENCHANTMENTS, ATTRIBUTES
+from data.minecraft_data import TARGET_SELECTORS, get_item_data, get_enchantment_options, get_attribute_options, compare_versions
 from command_summarizer import CommandSummarizer
 import re
 import threading
 import time
+from widgets.search_box import SearchBox  # Import SearchBox
 
 class GiveCommand(BaseCommand):
     """
@@ -41,31 +42,9 @@ class GiveCommand(BaseCommand):
             all_formatted_items (List[str]): List of all available items in display format.
             version_var (StringVar): The version variable from the parent frame.
         """
-        # Process all items and categories
         self.version_var = version_var
-        self.item_categories = ITEM_CATEGORIES
-        category_items = set(item for items in self.item_categories.values() for item in items)
-
-        # Add additional items from all_formatted_items
-        self.all_items = list(category_items)
-        self.all_formatted_items = [item.replace("_", " ").title() for item in self.all_items]
-        for item in all_formatted_items:
-            raw_item = item.lower().replace(" ", "_")
-            if raw_item not in category_items:
-                self.all_items.append(raw_item)
-                self.all_formatted_items.append(item)
-
-        # Create item data structure with tags and versions
-        self.item_data = [
-            {
-                'formatted': formatted_item,
-                'raw': raw_item,
-                'tags': ITEM_TAGS.get(raw_item, set()) | set(raw_item.split('_')) | set(formatted_item.lower().split()),
-                'version': ITEM_VERSIONS.get(raw_item, "1.0")
-            }
-            for formatted_item, raw_item in zip(self.all_formatted_items, self.all_items)
-        ]
-        self.item_data.sort(key=lambda x: x['formatted'])
+        self.item_data = get_item_data(all_formatted_items)  # Use centralized logic for item data
+        self.item_categories = {item['raw']: item for item in self.item_data}  # Map raw items to their data
 
         # Initialize loading state
         self.is_loading = False
@@ -352,8 +331,8 @@ class GiveCommand(BaseCommand):
         self.clear_nbt_helper_frame()
         label = ctk.CTkLabel(self.nbt_helper_frame, text="Select Enchantment:")
         label.pack(side="left", padx=5)
-        enchantment_var = ctk.StringVar(value=ENCHANTMENTS[0])
-        dropdown = ctk.CTkOptionMenu(self.nbt_helper_frame, values=ENCHANTMENTS, variable=enchantment_var)
+        enchantment_var = ctk.StringVar(value=get_enchantment_options()[0])
+        dropdown = ctk.CTkOptionMenu(self.nbt_helper_frame, values=get_enchantment_options(), variable=enchantment_var)
         dropdown.pack(side="left", padx=5)
         level_label = ctk.CTkLabel(self.nbt_helper_frame, text="Level:")
         level_label.pack(side="left", padx=5)
@@ -386,8 +365,8 @@ class GiveCommand(BaseCommand):
         self.clear_nbt_helper_frame()
         label = ctk.CTkLabel(self.nbt_helper_frame, text="Select Attribute:")
         label.pack(side="left", padx=5)
-        attribute_var = ctk.StringVar(value=ATTRIBUTES[0])
-        dropdown = ctk.CTkOptionMenu(self.nbt_helper_frame, values=ATTRIBUTES, variable=attribute_var)
+        attribute_var = ctk.StringVar(value=get_attribute_options()[0])
+        dropdown = ctk.CTkOptionMenu(self.nbt_helper_frame, values=get_attribute_options(), variable=attribute_var)
         dropdown.pack(side="left", padx=5)
         amount_label = ctk.CTkLabel(self.nbt_helper_frame, text="Amount:")
         amount_label.pack(side="left", padx=5)
@@ -456,136 +435,40 @@ class GiveCommand(BaseCommand):
     def update_suggestions(self, search_text: str = "") -> None:
         """
         Update the item suggestions based on search text, selected category, and version.
-        
+
         Args:
             search_text (str): The text to filter items by (default: "").
         """
         # Clear previous suggestions
         for widget in self.suggestions_frame.winfo_children():
             widget.destroy()
-        
-        selected_category = self.category_var.get()
+
         selected_version = self.version_var.get()
         search_text = search_text.lower()
-        
-        # Start loading in background thread
-        if self.loading_thread and self.loading_thread.is_alive():
-            self.is_loading = False
-            self.loading_thread.join()
-        
-        self.is_loading = True
-        self.loading_thread = threading.Thread(
-            target=self._load_suggestions,
-            args=(selected_category, selected_version, search_text)
-        )
-        self.loading_thread.start()
-    
-    def _load_suggestions(self, category: str, version: str, search_text: str) -> None:
-        """
-        Load suggestions in a background thread.
-        
-        Args:
-            category (str): Selected category.
-            version (str): Selected version.
-            search_text (str): Search text.
-        """
-        # Filter items based on category, version, and search
-        matches = []
-        for item in self.item_data:
-            # Check category filter
-            if category != "All Categories":
-                if item['raw'] not in self.item_categories[category]:
-                    continue
-            
-            # Check version filter
-            if self._compare_versions(item['version'], version) > 0:
-                continue
-            
-            # Check search text
-            if not search_text:
-                matches.append(item)
-            else:
-                # Check if search text matches any tag
-                if any(search_text in tag for tag in item['tags']):
-                    matches.append(item)
-                # Also check if it matches the formatted or raw name
-                elif search_text in item['formatted'].lower() or search_text in item['raw']:
-                    matches.append(item)
-            
-            # Add a small delay to prevent UI freezing
-            if len(matches) % 10 == 0:
-                time.sleep(0.001)
-                if not self.is_loading:
-                    return
-        
-        # Sort matches by tag priority
-        if search_text:
-            matches.sort(key=lambda x: (
-                # First priority: exact tag match
-                not any(search_text == tag for tag in x['tags']),
-                # Second priority: tag contains search text
-                not any(search_text in tag for tag in x['tags']),
-                # Third priority: formatted name contains search text
-                search_text not in x['formatted'].lower(),
-                # Fourth priority: raw name contains search text
-                search_text not in x['raw'],
-                # Finally sort alphabetically
-                x['formatted']
-            ))
-        
-        # Create buttons in the main thread
-        self.master.after(0, self._create_suggestion_buttons, matches)
-    
-    def _create_suggestion_buttons(self, matches: List[Dict[str, Any]]) -> None:
-        """
-        Create suggestion buttons in the main thread.
-        
-        Args:
-            matches (List[Dict[str, Any]]): List of matching items.
-        """
-        if not self.is_loading:
-            return
-            
+
+        # Filter items based on version and search text
+        matches = [
+            item for item in self.item_data
+            if compare_versions(item['version'], selected_version) <= 0 and
+            (not search_text or any(search_text in tag for tag in item['tags']))
+        ]
+
+        # Sort matches by relevance
+        matches.sort(key=lambda x: (
+            not any(search_text == tag for tag in x['tags']),  # Exact match first
+            not any(search_text in tag for tag in x['tags']),  # Partial match second
+            x['formatted']  # Alphabetical order
+        ))
+
+        # Create suggestion buttons
         for item in matches:
-            if not self.is_loading:
-                return
-                
             btn = ctk.CTkButton(
                 self.suggestions_frame,
                 text=f"{item['formatted']} ({item['version']})",
                 command=lambda f=item['formatted'], r=item['raw']: self.on_item_selected(f, r)
             )
             btn.pack(fill="x", padx=5, pady=1)
-            
-            # Add a small delay to prevent UI freezing
-            if len(self.suggestions_frame.winfo_children()) % 10 == 0:
-                time.sleep(0.001)
-    
-    def _compare_versions(self, version1: str, version2: str) -> int:
-        """
-        Compare two version strings.
-        
-        Args:
-            version1 (str): First version string.
-            version2 (str): Second version string.
-            
-        Returns:
-            int: 1 if version1 > version2, -1 if version1 < version2, 0 if equal.
-        """
-        v1_parts = [int(x) for x in version1.split('.')]
-        v2_parts = [int(x) for x in version2.split('.')]
-        
-        for i in range(max(len(v1_parts), len(v2_parts))):
-            v1 = v1_parts[i] if i < len(v1_parts) else 0
-            v2 = v2_parts[i] if i < len(v2_parts) else 0
-            
-            if v1 > v2:
-                return 1
-            elif v1 < v2:
-                return -1
-        
-        return 0
-    
+
     def on_category_change(self, category: str) -> None:
         """
         Handle category selection change.
@@ -734,5 +617,7 @@ class GiveCommand(BaseCommand):
         self.update_command()
         if hasattr(self.master, "master") and hasattr(self.master.master, "update_command"):
             self.master.master.update_command() 
+
+
 
 
