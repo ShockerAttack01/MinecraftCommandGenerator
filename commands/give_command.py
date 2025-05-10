@@ -17,7 +17,7 @@ Key Features:
 import customtkinter as ctk
 from typing import Dict, List, Any
 from .base_command import BaseCommand
-from data.minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, ITEM_TAGS, ITEM_VERSIONS, VERSIONS
+from data.minecraft_data import TARGET_SELECTORS, ITEM_CATEGORIES, ITEM_TAGS, ITEM_VERSIONS, VERSIONS, ENCHANTMENTS, ATTRIBUTES
 from command_summarizer import CommandSummarizer
 import re
 import threading
@@ -263,24 +263,164 @@ class GiveCommand(BaseCommand):
         nbt_buttons_frame = ctk.CTkFrame(frame)
         nbt_buttons_frame.pack(fill="x", padx=5, pady=5)
 
-        # Define predefined NBT options
+        # Create a frame for the helper line (hidden by default)
+        self.nbt_helper_frame = ctk.CTkFrame(frame)
+        self.nbt_helper_frame.pack(fill="x", padx=5, pady=5)
+        self.nbt_helper_frame.pack_forget()  # Hide initially
+
+        # Define predefined NBT options with helper callbacks
         nbt_options = {
-            "Unbreakable": '{"Unbreakable":1b}',
-            "Custom Name": '{"display":{"Name":"{\\"text\\":\\"Custom Item\\"}"}}',
-            "Enchantments": '{"Enchantments":[{"id":"minecraft:sharpness","lvl":5s}]}',
-            "Lore": '{"display":{"Lore":["{\\"text\\":\\"Special Lore\\"}"]}}',
-            "Attributes": '{"AttributeModifiers":[{"AttributeName":"generic.attack_damage","Name":"generic.attack_damage","Amount":10,"Operation":0,"UUID":[I;1,2,3,4]}]}'
+            "Custom Name": self.show_custom_name_helper,
+            "Lore": self.show_lore_helper,
+            "Enchantments": self.show_enchantments_helper,
+            "Attributes": self.show_attributes_helper,
+            "Unbreakable": lambda: self.append_nbt_data('{"Unbreakable":1b}')
         }
 
         # Create buttons for each NBT option
-        for label, nbt_data in nbt_options.items():
+        for label, command in nbt_options.items():
             button = ctk.CTkButton(
                 nbt_buttons_frame,
                 text=label,
-                command=lambda data=nbt_data: self.append_nbt_data(data),
+                command=command,
                 height=30
             )
             button.pack(side="left", padx=5, pady=2)
+
+    def show_custom_name_helper(self) -> None:
+        """
+        Show a helper line for adding a custom name.
+        """
+        self.clear_nbt_helper_frame()
+        label = ctk.CTkLabel(self.nbt_helper_frame, text="Enter Custom Name:")
+        label.pack(side="left", padx=5)
+        entry = ctk.CTkEntry(self.nbt_helper_frame)
+        entry.pack(side="left", fill="x", expand=True, padx=5)
+        apply_button = ctk.CTkButton(
+            self.nbt_helper_frame,
+            text="Apply",
+            command=lambda: self.apply_custom_name(entry.get())
+        )
+        apply_button.pack(side="left", padx=5)
+        self.nbt_helper_frame.pack(fill="x", padx=5, pady=5)
+
+    def apply_custom_name(self, name: str) -> None:
+        """
+        Apply the custom name to the NBT data.
+
+        Args:
+            name (str): The custom name to apply.
+        """
+        if name:
+            self.append_nbt_data(f'{{"display":{{"Name":"{{\\"text\\":\\"{name}\\"}}"}}}}')
+        self.nbt_helper_frame.pack_forget()
+
+    def show_lore_helper(self) -> None:
+        """
+        Show a helper line for adding lore.
+        """
+        self.clear_nbt_helper_frame()
+        label = ctk.CTkLabel(self.nbt_helper_frame, text="Enter Lore (comma-separated):")
+        label.pack(side="left", padx=5)
+        entry = ctk.CTkEntry(self.nbt_helper_frame)
+        entry.pack(side="left", fill="x", expand=True, padx=5)
+        apply_button = ctk.CTkButton(
+            self.nbt_helper_frame,
+            text="Apply",
+            command=lambda: self.apply_lore(entry.get())
+        )
+        apply_button.pack(side="left", padx=5)
+        self.nbt_helper_frame.pack(fill="x", padx=5, pady=5)
+
+    def apply_lore(self, lore: str) -> None:
+        """
+        Apply the lore to the NBT data.
+
+        Args:
+            lore (str): The lore to apply (comma-separated).
+        """
+        if lore:
+            lore_lines = lore.split(",")
+            lore_json = ','.join([f'{{"text":"{line.strip()}"}}' for line in lore_lines])
+            self.append_nbt_data(f'{{"display":{{"Lore":[{lore_json}]}}}}')
+        self.nbt_helper_frame.pack_forget()
+
+    def show_enchantments_helper(self) -> None:
+        """
+        Show a helper line for adding enchantments.
+        """
+        self.clear_nbt_helper_frame()
+        label = ctk.CTkLabel(self.nbt_helper_frame, text="Select Enchantment:")
+        label.pack(side="left", padx=5)
+        enchantment_var = ctk.StringVar(value=ENCHANTMENTS[0])
+        dropdown = ctk.CTkOptionMenu(self.nbt_helper_frame, values=ENCHANTMENTS, variable=enchantment_var)
+        dropdown.pack(side="left", padx=5)
+        level_label = ctk.CTkLabel(self.nbt_helper_frame, text="Level:")
+        level_label.pack(side="left", padx=5)
+        level_entry = ctk.CTkEntry(self.nbt_helper_frame, width=50)
+        level_entry.pack(side="left", padx=5)
+        apply_button = ctk.CTkButton(
+            self.nbt_helper_frame,
+            text="Apply",
+            command=lambda: self.apply_enchantments(enchantment_var.get(), level_entry.get())
+        )
+        apply_button.pack(side="left", padx=5)
+        self.nbt_helper_frame.pack(fill="x", padx=5, pady=5)
+
+    def apply_enchantments(self, enchantment: str, level: str) -> None:
+        """
+        Apply the enchantments to the NBT data.
+
+        Args:
+            enchantment (str): The enchantment ID.
+            level (str): The enchantment level.
+        """
+        if enchantment and level.isdigit():
+            self.append_nbt_data(f'{{"Enchantments":[{{"id":"minecraft:{enchantment}","lvl":{level}s}}]}}')
+        self.nbt_helper_frame.pack_forget()
+
+    def show_attributes_helper(self) -> None:
+        """
+        Show a helper line for adding attributes.
+        """
+        self.clear_nbt_helper_frame()
+        label = ctk.CTkLabel(self.nbt_helper_frame, text="Select Attribute:")
+        label.pack(side="left", padx=5)
+        attribute_var = ctk.StringVar(value=ATTRIBUTES[0])
+        dropdown = ctk.CTkOptionMenu(self.nbt_helper_frame, values=ATTRIBUTES, variable=attribute_var)
+        dropdown.pack(side="left", padx=5)
+        amount_label = ctk.CTkLabel(self.nbt_helper_frame, text="Amount:")
+        amount_label.pack(side="left", padx=5)
+        amount_entry = ctk.CTkEntry(self.nbt_helper_frame, width=50)
+        amount_entry.pack(side="left", padx=5)
+        apply_button = ctk.CTkButton(
+            self.nbt_helper_frame,
+            text="Apply",
+            command=lambda: self.apply_attributes(attribute_var.get(), amount_entry.get())
+        )
+        apply_button.pack(side="left", padx=5)
+        self.nbt_helper_frame.pack(fill="x", padx=5, pady=5)
+
+    def apply_attributes(self, attribute: str, amount: str) -> None:
+        """
+        Apply the attributes to the NBT data.
+
+        Args:
+            attribute (str): The attribute name.
+            amount (str): The attribute amount.
+        """
+        if attribute and amount.isdigit():
+            self.append_nbt_data(
+                f'{{"AttributeModifiers":[{{"AttributeName":"{attribute}","Name":"{attribute}","Amount":{amount},"Operation":0,"UUID":[I;1,2,3,4]}}]}}'
+            )
+        self.nbt_helper_frame.pack_forget()
+
+    def clear_nbt_helper_frame(self) -> None:
+        """
+        Clear all widgets from the NBT helper frame.
+        """
+        for widget in self.nbt_helper_frame.winfo_children():
+            widget.destroy()
 
     def append_nbt_data(self, nbt_data: str) -> None:
         """
@@ -594,7 +734,5 @@ class GiveCommand(BaseCommand):
         self.update_command()
         if hasattr(self.master, "master") and hasattr(self.master.master, "update_command"):
             self.master.master.update_command() 
-
-
 
 
